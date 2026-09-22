@@ -1,0 +1,14 @@
+# Copy to plp.conf and edit. Every value has a working default.
+# One machine, one VM, one candidate. plp.conf is git-ignored.
+
+VM_NAME=plp-exam            # the VM the candidate sits at
+UBUNTU_RELEASE=24.04        # cloud image release
+DISK_MB=25600
+VM_RAM=4096
+VM_CPUS=2
+
+EXAM_IP=192.168.56.10       # fixed host-only address the VM answers on
+SSH_PORT=2222               # host port forwarded to the VM during the build only
+
+CAND_PASSWORD=plp2026       # CHANGE THIS per sitting
+ADMIN_USER=examadmin        # your account on the VM: key-based, passwordless sudo

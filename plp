@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# plp — build and run the PLP examination environment on this machine.
+#
+# One machine, one VM, one candidate.
+#
+#   ./plp up          build everything: image, VM, provision, arm, take offline
+#   ./plp status      is it built, running, reachable, sealed?
+#   ./plp rearm       reset to pristine for the next candidate
+#   ./plp score       grade the candidate's work into marks/
+#   ./plp destroy     remove the VM
+#
+# Stage by stage, for debugging:
+#   ./plp doctor | image | vm | provision | arm
+#   ./plp reset <scenario>        rebuild one scenario mid-exam
+#
+# Configuration: copy plp.conf.example to plp.conf. Defaults work as-is.
+set -euo pipefail
+export PLP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$PLP_ROOT/lib/common.sh"
+
+run_step() { . "$PLP_ROOT/lib/steps/$1.sh"; }
+usage() { awk 'NR>1{ if (/^#/) { sub(/^# ?/,""); print } else exit }' "$PLP_ROOT/plp"; }
+
+case "${1:-help}" in
+  doctor)    run_step 00-doctor ;;
+  image)     run_step 00-doctor; run_step 10-image ;;
+  vm)        run_step 00-doctor; run_step 10-image; run_step 20-vm ;;
+  provision) run_step 30-provision ;;
+  arm)       run_step 40-arm ;;
+  up)
+    run_step 00-doctor
+    run_step 10-image
+    run_step 20-vm
+    run_step 30-provision
+    run_step 40-arm
+    cat <<DONE
+
+$B  Ready for the candidate.$N
+
+  The VM '$VM_NAME' is running, offline, with all three scenarios armed.
+
+  Sit the candidate at this machine and have them run:
+
+      ssh candidate@$EXAM_IP        password: $CAND_PASSWORD
+
+  Their tickets are already in ~/tickets on the VM. For paper copies:
+      bash bin/make-candidate-bundle.sh     -> build/candidate-bundle/
+
+  Afterwards:  ./plp score
+
+DONE
+    ;;
+  status)    run_step 80-status ;;
+  rearm)     run_step 45-rearm ;;
+  score)     run_step 60-score ;;
+  reset)     shift; run_step 70-reset ;;
+  destroy)   run_step 90-destroy ;;
+  help|-h|--help) usage ;;
+  *) echo "unknown command: $1" >&2; echo; usage; exit 1 ;;
+esac
