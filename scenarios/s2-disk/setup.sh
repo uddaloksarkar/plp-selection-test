@@ -66,17 +66,35 @@ UNIT
 # --- the metrics collector: holds an unlinked spool file open --------------
 cat > /usr/local/bin/exam-metrics-collector <<'MET'
 #!/usr/bin/env python3
-"""Buffers metrics in an unlinked spool file (classic 'deleted but open' bug)."""
+"""Buffers metrics in an unlinked spool file (classic 'deleted but open' bug).
+
+The spool is allocated ONCE PER BOOT: a marker in /run (tmpfs, so it is gone
+after a reboot) records that this boot's allocation has been made. That is what
+makes restarting the service actually reclaim the space -- which is the whole
+lesson of the scenario -- while a reboot still puts the fault back, so the
+armed snapshot stays armed.
+"""
 import os, time
+
+MARKER = "/run/exam-metrics-collector.allocated"
 os.makedirs("/srv/data/.cache", exist_ok=True)
 path = "/srv/data/.cache/metrics.spool"
+
+leak = os.environ.get("EXAM_LEAK") == "1" and not os.path.exists(MARKER)
 fh = open(path, "wb")
-if os.environ.get("EXAM_LEAK") == "1":
+if leak:
+    open(MARKER, "w").close()
     chunk = b"\0" * (1024 * 1024)
-    for _ in range(300):
-        fh.write(chunk)
-    fh.flush(); os.fsync(fh.fileno())
-os.unlink(path)              # unlinked, still held open
+    for _ in range(2048):              # stop early on ENOSPC
+        try:
+            fh.write(chunk)
+        except OSError:
+            break
+    try:
+        fh.flush(); os.fsync(fh.fileno())
+    except OSError:
+        pass
+os.unlink(path)                        # unlinked, still held open
 while True:
     time.sleep(5)
 MET

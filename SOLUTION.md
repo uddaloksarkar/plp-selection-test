@@ -62,8 +62,13 @@ sudo rm /srv/data/archive/dump-2025-*.tar.gz
 sudo rm -rf /srv/spool/stale                       # the runaway cron's locks
 ```
 
-`reportd` resumes by itself once space exists; `systemctl restart reportd` is
-harmless and should be recorded if done.
+`reportd` will not resume by itself: with the filesystem genuinely full its
+writes fail, so it must be restarted once space exists.
+
+The collector allocates its spool **once per boot** (it records the fact in
+`/run`), so restarting it reclaims the space for good during the sitting. A
+reboot puts the fault back — which is what keeps the armed snapshot armed, and
+is another reason rebooting is not the answer here.
 
 ### Verification
 

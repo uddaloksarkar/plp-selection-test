@@ -48,8 +48,8 @@ fi
 
 # now let the collector take the remaining space and hold it open
 systemctl start exam-metrics-collector
-for _i in $(seq 1 30); do
-  [ "$(df --output=avail -k /srv/data | tail -1)" -lt 4096 ] && break
+for _i in $(seq 1 60); do
+  [ "$(df --output=avail -k /srv/data | tail -1)" -lt 64 ] && break
   sleep 1
 done
 sync
@@ -70,8 +70,9 @@ systemctl restart reportd 2>/dev/null || true
 gap=$(( $(df -k /srv/data | awk 'NR==2{print $3}') - $(du -sk /srv/data 2>/dev/null | cut -f1) ))
 [ "$gap" -gt $(( (LEAK_MB - 50) * 1024 )) ] \
   || { echo "s2 break FAILED: df/du gap is only ${gap} KB - the leak did not establish" >&2; exit 1; }
-[ "$(df --output=pcent -k /srv/data | tail -1 | tr -dc 0-9)" -ge 99 ] \
-  || { echo "s2 break FAILED: /srv/data is not full" >&2; exit 1; }
+_free=$(df --output=avail -k /srv/data | tail -1)
+[ "$_free" -lt 64 ] \
+  || { echo "s2 break FAILED: /srv/data still has ${_free} KB free - reportd would keep writing" >&2; exit 1; }
 touch /srv/spool/incoming/_probe 2>/dev/null \
   && { rm -f /srv/spool/incoming/_probe; echo "s2 break FAILED: /srv/spool still accepts files" >&2; exit 1; }
 
