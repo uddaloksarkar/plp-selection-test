@@ -14,7 +14,7 @@ ok "harness up to date (state/ preserved)"
 
 say "Checking the baseline matches these setup scripts"
 want=$(cat "$PLP_ROOT"/scenarios/*/setup.sh | sha256sum | cut -d' ' -f1)
-have=$(vssh "sudo cat /opt/plp-exam/state/setup.sha256 2>/dev/null" || echo none)
+have=$(vssh "sudo cat /var/lib/plp-exam/setup.sha256 2>/dev/null" || echo none)
 if [ "$want" != "$have" ]; then
   die "the 'golden' snapshot was built from different setup scripts.
     Anything setup.sh installs on the machine is baked into that snapshot, so
@@ -62,3 +62,5 @@ wait_for_ssh 240 || die "VM did not come up on $EXAM_IP — check with: VBoxMana
 vssh "ping -c1 -W2 1.1.1.1" >/dev/null 2>&1 \
   && warn "the VM still has internet — expected none" \
   || ok "confirmed offline"
+
+wait_faults_ready

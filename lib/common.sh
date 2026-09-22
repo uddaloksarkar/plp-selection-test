@@ -102,3 +102,19 @@ ensure_hostonly() {
   VBoxManage hostonlyif ipconfig "$ifn" --ip "$HOSTONLY_HOST_IP" --netmask 255.255.255.0 >/dev/null 2>&1 || true
   echo "$ifn"
 }
+
+# The disk scenario's central fault is a deleted-but-open file, which the
+# collector re-creates at every boot and which takes a few seconds to fill.
+# Until it has, the file is not yet unlinked and the fault is not yet present:
+# a candidate (or a scoring run) arriving inside that window sees the wrong
+# machine. Wait for it rather than declaring the VM ready early.
+wait_faults_ready() {
+  local i gap
+  printf '  waiting for the faults to settle '
+  for i in $(seq 1 24); do
+    gap=$(vssh "sudo sh -c 'echo \$(( \$(df -k /srv/data | awk \"NR==2{print \\\$3}\") - \$(du -sk /srv/data 2>/dev/null | cut -f1) ))'" 2>/dev/null || echo 0)
+    if [ "${gap:-0}" -gt 256000 ]; then echo " ready"; return 0; fi
+    printf '.'; sleep 5
+  done
+  echo; warn "the disk scenario's leak has not appeared after 2 minutes — check it before the sitting"
+}

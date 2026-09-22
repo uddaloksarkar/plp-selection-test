@@ -19,4 +19,5 @@ ok "restored, nic1 -> $HOIF"
 VBoxManage startvm "$VM_NAME" --type headless >/dev/null
 use_exam_net
 wait_for_ssh 240 || die "VM did not come up on $EXAM_IP"
+wait_faults_ready
 ok "ready for the next candidate at $EXAM_IP (candidate / $CAND_PASSWORD)"

@@ -7,7 +7,7 @@
 #   underlay veth 10.10.0.1  <---------->    veth 10.10.0.2:51820/udp
 #   inside the ns: http://10.100.0.2:8080  = the "e-library proxy"
 set -euo pipefail
-STATE="${EXAM_ROOT:-/opt/plp-exam}/state"; install -d "$STATE"
+STATE="/var/lib/plp-exam"; install -d -m 0700 "$STATE"
 umask 077
 install -d -m 0700 /etc/wireguard
 

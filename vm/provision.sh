@@ -112,6 +112,7 @@ chattr +a /var/log/exam-audit.log 2>/dev/null || true   # append-only where the 
 ufw --force disable >/dev/null 2>&1 || true
 
 echo "### 4/5 scenario baselines"
+install -d -m 0700 /var/lib/plp-exam
 mkdir -p "$HERE/state"
 bash "$HERE/bin/exam-ctl.sh" setup
 

@@ -48,7 +48,7 @@ ok "VM answers on $EXAM_IP once it is on the host-only network"
 # arms is a SNAPSHOT, and anything setup.sh installs on the machine (helper
 # programs in /usr/local/bin, mkfs options) is frozen in it. Editing a setup.sh
 # and re-running only `arm` would silently arm the old baseline.
-vssh "sudo sh -c 'cat /opt/plp-exam/scenarios/*/setup.sh | sha256sum | cut -d\" \" -f1 > /opt/plp-exam/state/setup.sha256'"
+vssh "sudo sh -c 'cat /opt/plp-exam/scenarios/*/setup.sh | sha256sum | cut -d\" \" -f1 > /var/lib/plp-exam/setup.sha256'"
 ok "baseline fingerprint recorded"
 
 say "Setting the candidate password for this sitting"

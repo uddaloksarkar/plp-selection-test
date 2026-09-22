@@ -3,7 +3,7 @@
 # wheelhouse so the scenario works on a VM with no internet during the exam.
 # NOTE: provisioning this scenario DOES need internet once, to fill /opt/wheelhouse.
 set -euo pipefail
-STATE="${EXAM_ROOT:-/opt/plp-exam}/state"; install -d "$STATE"
+STATE="/var/lib/plp-exam"; install -d -m 0700 "$STATE"
 die_s5() { echo "s5 setup: $*" >&2; exit 1; }
 P=/srv/projects/analysis
 

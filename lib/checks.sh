@@ -7,7 +7,11 @@
 #   SCORE <scenario> <earned>/<total>
 
 EXAM_ROOT="${EXAM_ROOT:-/opt/plp-exam}"
-STATE_DIR="$EXAM_ROOT/state"
+# Truth recorded on the VM when the baseline was built: the sha256 manifest of
+# the live data, expected outputs. It must live OUTSIDE the harness directory,
+# because seal.sh deletes that before the exam and score.sh re-syncs a fresh
+# copy -- anything kept inside it is gone by marking time.
+STATE_DIR="${PLP_STATE_DIR:-/var/lib/plp-exam}"
 _TOTAL=0
 _EARNED=0
 

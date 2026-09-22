@@ -3,7 +3,7 @@
 #   /srv/data   1 GB  ext4   - project data + service logs
 #   /srv/spool  48 MB ext4, deliberately inode-poor - job submission spool
 set -euo pipefail
-STATE="${EXAM_ROOT:-/opt/plp-exam}/state"; install -d "$STATE"
+STATE="/var/lib/plp-exam"; install -d -m 0700 "$STATE"
 install -d /opt/exam/disks
 
 systemctl stop reportd exam-metrics-collector 2>/dev/null || true
