@@ -52,7 +52,7 @@ VBoxManage modifyvm "$VM_NAME" --natpf1 delete ssh >/dev/null 2>&1 || true
 ok "nic1 -> $HOIF (no internet)"
 
 say "Snapshotting 'armed'"
-snap_exists "$VM_NAME" armed && VBoxManage snapshot "$VM_NAME" delete armed >/dev/null 2>&1 || true
+snap_delete "$VM_NAME" armed || die "could not delete the old 'armed' snapshot — see VBoxManage's error above"
 VBoxManage snapshot "$VM_NAME" take armed --description "faults injected, harness removed, offline" >/dev/null
 ok "snapshot: armed"
 

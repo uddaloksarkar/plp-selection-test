@@ -61,6 +61,8 @@ VBoxManage storageattach "$VM_NAME" --storagectl IDE --port 0 --device 0 \
 
 say "Snapshotting 'golden'"
 poweroff_wait "$VM_NAME"
-snap_exists "$VM_NAME" golden && VBoxManage snapshot "$VM_NAME" delete golden >/dev/null 2>&1 || true
+# A new baseline makes every existing snapshot obsolete, 'armed' included: it
+# was armed from the old baseline, and rearming it would hand out a stale exam.
+snap_delete "$VM_NAME" || die "could not delete the old snapshots — see VBoxManage's error above"
 VBoxManage snapshot "$VM_NAME" take golden --description "healthy baseline, harness present" >/dev/null
 ok "snapshot: golden"

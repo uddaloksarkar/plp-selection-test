@@ -34,6 +34,21 @@ vm_running(){ [ "$(vm_state "$1")" = running ]; }
 vm_nic1()   { VBoxManage showvminfo "$1" --machinereadable 2>/dev/null | sed -n 's/^nic1="\(.*\)"/\1/p'; }
 snap_exists(){ VBoxManage snapshot "$1" list --machinereadable 2>/dev/null | grep -q "SnapshotName.*=\"$2\""; }
 
+# snap_delete <vm> [name] — delete every snapshot, or every one called <name>.
+# By UUID, because a name stops being unique once it repeats; deepest first,
+# because VirtualBox refuses to delete a snapshot that is current and has a
+# child (the state after restoring 'golden'). A refused delete used to be
+# swallowed, and each provision then nested another 'golden' under the last.
+snap_delete() {
+  local vm=$1 name=${2:-} uuid
+  for uuid in $(VBoxManage snapshot "$vm" list --machinereadable 2>/dev/null | awk -F'"' -v want="$name" '
+        /^SnapshotName/ { split($1, k, "="); n[substr(k[1], 13)] = $2 }
+        /^SnapshotUUID/ { split($1, k, "="); s = substr(k[1], 13)
+                          if (want == "" || n[s] == want) print $2 }' | tac); do
+    VBoxManage snapshot "$vm" delete "$uuid" >/dev/null || return 1
+  done
+}
+
 # --- ssh: two possible paths to the same VM ----------------------------------
 #   build  : NAT + port forward   127.0.0.1:$SSH_PORT
 #   exam   : host-only, fixed     $EXAM_IP:22        (no internet)

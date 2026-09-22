@@ -28,6 +28,8 @@ flowchart LR
 
 `golden` is what you return to if you want to change a scenario. `armed` is the
 state a candidate gets, and `./plp rearm` restores it between sittings.
+Re-provisioning deletes `armed` along with the old `golden`, since it was armed
+from the old baseline; run `./plp arm` afterwards.
 
 A VM that still has `/opt/plp-exam` on it holds every answer. `./plp up`
 verifies the harness is gone before it takes the `armed` snapshot, and refuses
@@ -93,7 +95,7 @@ Roughly fifteen minutes, unattended, ending with:
 | `00-doctor` | `./plp doctor` | Checks the host, installs missing packages, generates a per-machine SSH key in `.plp/` |
 | `10-image` | `./plp image` | Downloads the Ubuntu cloud image (~600 MB, cached), converts to VDI, resizes, builds the cloud-init seed with `xorriso` |
 | `20-vm` | `./plp vm` | Creates the VM on NAT with an SSH forward, boots headless, waits for cloud-init and SSH |
-| `30-provision` | `./plp provision` | Pushes the harness, runs `provision.sh`, pins the fixed exam address, sets the candidate password, **health-checks**, snapshots `golden` |
+| `30-provision` | `./plp provision` | Pushes the harness, runs `provision.sh`, pins the fixed exam address, sets the candidate password, **health-checks**, replaces every existing snapshot (`armed` too) with a fresh `golden` |
 | `40-arm` | `./plp arm` | Injects the faults, installs the candidate bundle, deletes the harness, **verifies it is gone**, snapshots `armed`, then switches the VM to host-only and confirms it has no internet |
 
 **Provisioning must end with `Baseline clean.`** That is the invariant: on an
