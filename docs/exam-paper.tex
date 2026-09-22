@@ -65,21 +65,20 @@ recorded. Questions may be attempted in any order.
 %================================================================== Q1
 \item \textbf{Disk full on the lab file server.} \hfill [16 marks]
 
-\emph{Reported by a research scholar:} ``The reporting log stopped updating
-before 07:00. I cannot copy anything into \texttt{/srv/data} --- it says the
-disk is full. Submitting a job into \texttt{/srv/spool} \emph{also} says the
-disk is full, but \texttt{df -h} shows that one has plenty of space left. That
-part makes no sense to me.''
+\emph{Reported by a research scholar:} ``I cannot copy anything into
+\texttt{/srv/data} --- it says the disk is full, and nothing I can see in there
+accounts for that much space. Submitting a job into \texttt{/srv/spool}
+\emph{also} says the disk is full, but \texttt{df -h} shows that one has plenty
+of space left. That part makes no sense to me.''
 
 Two storage faults, on two different filesystems. \texttt{/srv/data} is
-genuinely full, so the reporting daemon can no longer write. \texttt{/srv/spool}
-refuses to create files \emph{although \texttt{df} reports free space} ---
-something other than free bytes has run out.
+genuinely full, and the files you can see do not add up to the space reported
+as used. \texttt{/srv/spool} refuses to create files \emph{although \texttt{df}
+reports free space} --- something other than free bytes has run out.
 
 \hd{How to reproduce it}
 \begin{shell}
-df -h /srv/data
-tail -1 /srv/data/logs/reportd.log     # last entry is hours old
+df -h /srv/data                        # 100% used
 df -h /srv/spool                       # shows space free
 touch /srv/spool/incoming/testjob      # "No space left on device"
 sudo du -sh /srv/data                  # smaller than df says is in use
@@ -108,8 +107,6 @@ sudo du -sh /srv/data                  # smaller than df says is in use
 \hd{How to check your work}
 \begin{shell}
 df -h /srv/data                       # Use% under 10%
-sudo systemctl restart reportd; sleep 5
-tail -1 /srv/data/logs/reportd.log    # timestamp within the last few seconds
 touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
 ls /srv/data/current                  # five survey-block CSV files, still there
 \end{shell}

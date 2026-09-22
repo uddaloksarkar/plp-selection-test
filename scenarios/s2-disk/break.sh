@@ -14,6 +14,7 @@ set -euo pipefail
 
 LEAK_MB=300
 
+
 # (1) arm the leak, but do not start it yet
 install -d /etc/systemd/system/exam-metrics-collector.service.d
 printf '[Service]\nEnvironment=EXAM_LEAK=1\n' \
@@ -39,17 +40,12 @@ if [ "$fill" -gt 0 ]; then
   done
 fi
 
-# pad the log to a 4K boundary so the next append must allocate a fresh block
-if [ -f /srv/data/logs/reportd.log ]; then
-  _sz=$(stat -c %s /srv/data/logs/reportd.log)
-  _pad=$(( 4096 - (_sz % 4096) ))
-  [ "$_pad" -lt 4096 ] && head -c "$_pad" /dev/zero | tr '\0' '\n' >> /srv/data/logs/reportd.log
-fi
-
 # now let the collector take the remaining space and hold it open
 systemctl start exam-metrics-collector
+# wait for the collector to finish claiming its spool
 for _i in $(seq 1 60); do
-  [ "$(df --output=avail -k /srv/data | tail -1)" -lt 64 ] && break
+  _g=$(( $(df -k /srv/data | awk 'NR==2{print $3}') - $(du -sk /srv/data 2>/dev/null | cut -f1) ))
+  [ "$_g" -gt $(( (LEAK_MB - 50) * 1024 )) ] && break
   sleep 1
 done
 sync
@@ -58,11 +54,11 @@ sync
 install -d /srv/spool/stale
 i=0
 while [ $i -lt 4000 ]; do
-  : > "/srv/spool/stale/job-$i.lock" 2>/dev/null || break
+  { : > "/srv/spool/stale/job-$i.lock"; } 2>/dev/null || break
   i=$((i+1))
 done
 
-systemctl restart reportd 2>/dev/null || true
+systemctl start reportd 2>/dev/null || true
 
 # --- assert the faults actually took -----------------------------------------
 # A break script that half-worked produces an exam whose marks are wrong, and
@@ -70,9 +66,8 @@ systemctl restart reportd 2>/dev/null || true
 gap=$(( $(df -k /srv/data | awk 'NR==2{print $3}') - $(du -sk /srv/data 2>/dev/null | cut -f1) ))
 [ "$gap" -gt $(( (LEAK_MB - 50) * 1024 )) ] \
   || { echo "s2 break FAILED: df/du gap is only ${gap} KB - the leak did not establish" >&2; exit 1; }
-_free=$(df --output=avail -k /srv/data | tail -1)
-[ "$_free" -lt 64 ] \
-  || { echo "s2 break FAILED: /srv/data still has ${_free} KB free - reportd would keep writing" >&2; exit 1; }
+[ "$(df --output=pcent -k /srv/data | tail -1 | tr -dc 0-9)" -ge 99 ] \
+  || { echo "s2 break FAILED: /srv/data is not full" >&2; exit 1; }
 touch /srv/spool/incoming/_probe 2>/dev/null \
   && { rm -f /srv/spool/incoming/_probe; echo "s2 break FAILED: /srv/spool still accepts files" >&2; exit 1; }
 

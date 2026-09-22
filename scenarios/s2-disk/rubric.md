@@ -2,9 +2,8 @@
 
 | id | marks | what it checks |
 |---|---|---|
-| s2.space | 4 | `/srv/data` under 10% used |
-| s2.leak | 4 | the unlinked-but-open 300 MB file reclaimed |
-| s2.reportd | 2 | the dependent service recovered |
+| s2.space | 5 | `/srv/data` under 10% used |
+| s2.leak | 5 | the unlinked-but-open 300 MB file reclaimed |
 | s2.current | 2 | live data untouched (sha256 manifest) |
 | s2.inodes | 4 | `/srv/spool` can create files again |
 | s2.penfmt | −8 | reformatted/resized instead of diagnosing |

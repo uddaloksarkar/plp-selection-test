@@ -5,9 +5,9 @@
 
 > "Three of us have hit this since this morning.
 >
-> 1. The reporting log stopped updating some time before 07:00.
-> 2. I can't copy anything into `/srv/data` — it says the disk is full.
-> 3. Submitting a job into `/srv/spool` *also* says the disk is full, but
+> 1. I can't copy anything into `/srv/data` — it says the disk is full, and
+>    nothing I can see in there accounts for that much space.
+> 2. Submitting a job into `/srv/spool` *also* says the disk is full, but
 >    `df -h` shows that one has plenty of space left. That part makes no sense
 >    to me.
 >
@@ -17,16 +17,15 @@
 
 Two different storage faults, on two different filesystems:
 
-- **`/srv/data`** is genuinely full. The reporting daemon can no longer write to
-  its log.
+- **`/srv/data`** is genuinely full, and the files you can see there do not
+  add up to the space reported as used.
 - **`/srv/spool`** refuses to create new files **even though `df` reports free
   space**. Something other than free bytes has run out.
 
 ## 2. How to reproduce it
 
 ```bash
-df -h /srv/data
-tail -1 /srv/data/logs/reportd.log      # last line is hours old
+df -h /srv/data                         # 100% used
 ```
 
 ```bash
@@ -42,7 +41,7 @@ sudo du -sh /srv/data                   # much smaller than df says is in use
 
 ## 3. What to fix
 
-Four things. Each is assessed separately, so do as many as you can — an
+Three things. Each is assessed separately, so do as many as you can — an
 incomplete ticket still earns the parts you got right.
 
 **3.1 Bring `/srv/data` back to under 10% used.**
@@ -55,15 +54,7 @@ Freeing the largest obvious files will help but will not get you to 10% on its
 own. Before you delete anything, check whether it is safe to delete — the
 archive directory carries a note saying what has already been copied elsewhere.
 
-**3.2 Get the reporting daemon writing to its log again.**
-
-The service `reportd` is running, but its writes have been failing because the
-filesystem was full. Once space exists, confirm it has actually resumed rather
-than assuming: look at the last line of `/srv/data/logs/reportd.log` and check
-its timestamp is current, not hours old. If it has not picked up by itself,
-restarting the service is reasonable — say so in your FIXLOG if you do.
-
-**3.3 Make `/srv/spool` able to accept new files again.**
+**3.2 Make `/srv/spool` able to accept new files again.**
 
 This is a *separate* filesystem with a *separate* fault, and it is not short of
 space — `df -h` will keep telling you it has room. Freeing bytes there will not
@@ -72,7 +63,7 @@ another mode that reports the other one. Find what has run out, find what
 consumed it, and clear that. `/srv/spool/queue/README` explains what the
 directory is for and should stay.
 
-**3.4 Write the explanation in `~/FIXLOG.md`.**
+**3.3 Write the explanation in `~/FIXLOG.md`.**
 
 Specifically: why did `/srv/spool` report **"No space left on device"** while
 `df` showed free space? Two or three sentences naming the actual resource that
@@ -82,15 +73,10 @@ length.
 
 ## 4. How to check you have fixed it
 
-Run these. All four should look right before you move on.
+Run these. All three should look right before you move on.
 
 ```bash
 df -h /srv/data                         # Use% under 10%
-```
-```bash
-sudo systemctl restart reportd; sleep 5
-tail -1 /srv/data/logs/reportd.log      # timestamp within the last few seconds
-date                                    # compare
 ```
 ```bash
 touch /srv/spool/incoming/testjob && echo OK && rm /srv/spool/incoming/testjob

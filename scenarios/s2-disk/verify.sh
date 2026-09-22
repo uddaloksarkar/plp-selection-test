@@ -15,11 +15,6 @@ big_deleted_open() {           # a still-open unlinked file >50 MB on /srv/data
   return 1
 }
 
-reportd_writing() {            # log touched in the last 40 s
-  local age; age=$(( $(date +%s) - $(stat -c %Y /srv/data/logs/reportd.log 2>/dev/null || echo 0) ))
-  [ "$age" -lt 40 ]
-}
-
 current_intact() { ( cd /srv/data && sha256sum -c --quiet "$STATE_DIR/s2-current.sha256" ); }
 
 spool_writable() {             # can the spool take a fresh batch of jobs?
@@ -34,9 +29,8 @@ fs_not_recreated() {           # UUIDs recorded implicitly: image files still th
   [ "$(stat -c %s /opt/exam/disks/spool.img)" = "50331648" ]
 }
 
-check 4 s2.space      "/srv/data back under 10% used"          data_under_10pct
-check 4 s2.leak       "no large deleted-but-open file remains" not big_deleted_open
-check 2 s2.reportd    "reportd is writing to its log again"    reportd_writing
+check 5 s2.space      "/srv/data back under 10% used"          data_under_10pct
+check 5 s2.leak       "no large deleted-but-open file remains" not big_deleted_open
 check 2 s2.current    "/srv/data/current untouched"            current_intact
 check 4 s2.inodes     "/srv/spool accepts 200 new files"       spool_writable
 

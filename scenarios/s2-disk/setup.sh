@@ -45,18 +45,43 @@ echo "Job spool. Files older than 7 days are purged by cron." > /srv/spool/queue
 
 # --- the reporting service: proof that writes work ------------------------
 cat > /usr/local/bin/exam-reportd <<'RPT'
-#!/bin/bash
-while :; do
-  echo "$(date -Is) reportd heartbeat" >> /srv/data/logs/reportd.log || true
-  sleep 3
-done
+#!/usr/bin/env python3
+"""Departmental reporting daemon.
+
+Writes with O_DSYNC on purpose. With ext4's delayed allocation an ordinary
+append to a full filesystem SUCCEEDS into the page cache, updates the file's
+mtime, and only fails later at writeback -- so the log would look like it was
+still being written when in fact nothing could be persisted. A synchronous
+write allocates immediately and returns ENOSPC, so the log genuinely stops.
+The daemon keeps running and keeps trying, which is what the users see.
+"""
+import os, time, datetime
+
+LOG = "/srv/data/logs/reportd.log"
+os.makedirs(os.path.dirname(LOG), exist_ok=True)
+while True:
+    line = datetime.datetime.now().isoformat() + " reportd heartbeat\n"
+    try:
+        fd = os.open(LOG, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_DSYNC, 0o644)
+        try:
+            os.write(fd, line.encode())
+        finally:
+            os.close(fd)
+    except OSError:
+        pass          # no space: keep running, keep failing, exactly as reported
+    time.sleep(3)
 RPT
 chmod 0755 /usr/local/bin/exam-reportd
 cat > /etc/systemd/system/reportd.service <<'UNIT'
 [Unit]
 Description=Departmental reporting daemon
-After=srv-data.mount
+After=srv-data.mount exam-metrics-collector.service
 [Service]
+# Let the metrics collector claim its spool first. Without this, reportd gets
+# a write in during the seconds before the filesystem fills, which allocates a
+# fresh block and keeps it writing for several minutes -- so "the log stopped
+# updating" would not be true just after a rearm.
+ExecStartPre=/bin/sleep 25
 ExecStart=/usr/local/bin/exam-reportd
 Restart=always
 [Install]
@@ -68,11 +93,17 @@ cat > /usr/local/bin/exam-metrics-collector <<'MET'
 #!/usr/bin/env python3
 """Buffers metrics in an unlinked spool file (classic 'deleted but open' bug).
 
-The spool is allocated ONCE PER BOOT: a marker in /run (tmpfs, so it is gone
-after a reboot) records that this boot's allocation has been made. That is what
-makes restarting the service actually reclaim the space -- which is the whole
-lesson of the scenario -- while a reboot still puts the fault back, so the
-armed snapshot stays armed.
+Two details matter.
+
+  * The spool is allocated ONCE PER BOOT, recorded by a marker in /run (tmpfs,
+    so a reboot clears it). That is what lets restarting the service actually
+    reclaim the space -- the lesson of the scenario -- while a reboot still
+    puts the fault back, keeping the armed snapshot armed.
+
+  * Writes are synchronous (O_DSYNC) and step down to 4K at the end. With
+    ext4's delayed allocation a buffered write to a full filesystem succeeds
+    and only fails later at writeback, so the spool would stop short and leave
+    free space behind -- enough for the reporting daemon to keep writing.
 """
 import os, time
 
@@ -81,20 +112,17 @@ os.makedirs("/srv/data/.cache", exist_ok=True)
 path = "/srv/data/.cache/metrics.spool"
 
 leak = os.environ.get("EXAM_LEAK") == "1" and not os.path.exists(MARKER)
-fh = open(path, "wb")
+fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_DSYNC, 0o600)
 if leak:
     open(MARKER, "w").close()
-    chunk = b"\0" * (1024 * 1024)
-    for _ in range(2048):              # stop early on ENOSPC
-        try:
-            fh.write(chunk)
-        except OSError:
-            break
-    try:
-        fh.flush(); os.fsync(fh.fileno())
-    except OSError:
-        pass
-os.unlink(path)                        # unlinked, still held open
+    for size, limit in ((1024 * 1024, 2048), (4096, 512)):
+        blob = b"\0" * size
+        for _ in range(limit):
+            try:
+                os.write(fd, blob)
+            except OSError:
+                break                      # full at this granularity; try finer
+os.unlink(path)                            # unlinked, still held open
 while True:
     time.sleep(5)
 MET

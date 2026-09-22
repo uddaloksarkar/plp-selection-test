@@ -62,9 +62,6 @@ sudo rm /srv/data/archive/dump-2025-*.tar.gz
 sudo rm -rf /srv/spool/stale                       # the runaway cron's locks
 ```
 
-`reportd` will not resume by itself: with the filesystem genuinely full its
-writes fail, so it must be restarted once space exists.
-
 The collector allocates its spool **once per boot** (it records the fact in
 `/run`), so restarting it reclaims the space for good during the sitting. A
 reboot puts the fault back — which is what keeps the armed snapshot armed, and
@@ -85,9 +82,8 @@ ls /srv/data/current                     # five CSVs, untouched
 
 | Check | Marks |
 |---|---|
-| `s2.space` — `/srv/data` under 10% | 4 |
-| `s2.leak` — no large deleted-but-open file remains | 4 |
-| `s2.reportd` — log being written again | 2 |
+| `s2.space` — `/srv/data` under 10% | 5 |
+| `s2.leak` — no large deleted-but-open file remains | 5 |
 | `s2.current` — live data intact (sha256 manifest) | 2 |
 | `s2.inodes` — spool accepts 200 new files | 4 |
 | `s2.penfmt` — filesystem recreated or resized | −8 |

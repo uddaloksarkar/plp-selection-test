@@ -31,7 +31,7 @@ case "$cmd" in
   list)  printf '%s\n' "${ALL[@]}" ;;
   setup) require_root; require_exam_vm; for s in "${sel[@]}"; do run_stage "$s" setup.sh; done ;;
   arm)   require_root; require_exam_vm; for s in "${sel[@]}"; do run_stage "$s" break.sh; done
-         echo; echo "Faults armed. Snapshot the VM now as 'armed'." ;;
+         : ;;
   reset) require_root; require_exam_vm
          for s in "${sel[@]}"; do run_stage "$s" setup.sh; run_stage "$s" break.sh; done ;;
   health) require_root; "$HERE/vm/healthcheck.sh" "${sel[@]}" ;;

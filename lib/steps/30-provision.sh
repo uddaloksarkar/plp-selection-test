@@ -44,6 +44,13 @@ vssh "ip -4 addr show | grep -q '$EXAM_IP'" \
   || die "the VM did not take $EXAM_IP — check /usr/local/sbin/plp-examnet on the VM"
 ok "VM answers on $EXAM_IP once it is on the host-only network"
 
+# Fingerprint the setup scripts. arm compares against this: the baseline it
+# arms is a SNAPSHOT, and anything setup.sh installs on the machine (helper
+# programs in /usr/local/bin, mkfs options) is frozen in it. Editing a setup.sh
+# and re-running only `arm` would silently arm the old baseline.
+vssh "sudo sh -c 'cat /opt/plp-exam/scenarios/*/setup.sh | sha256sum | cut -d\" \" -f1 > /opt/plp-exam/state/setup.sha256'"
+ok "baseline fingerprint recorded"
+
 say "Setting the candidate password for this sitting"
 vssh "echo 'candidate:$CAND_PASSWORD' | sudo chpasswd"
 ok "candidate / $CAND_PASSWORD"

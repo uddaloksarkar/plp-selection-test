@@ -12,6 +12,16 @@ say "Syncing the harness to the VM"
 vrsync_harness || die "copy failed"
 ok "harness up to date (state/ preserved)"
 
+say "Checking the baseline matches these setup scripts"
+want=$(cat "$PLP_ROOT"/scenarios/*/setup.sh | sha256sum | cut -d' ' -f1)
+have=$(vssh "sudo cat /opt/plp-exam/state/setup.sha256 2>/dev/null" || echo none)
+if [ "$want" != "$have" ]; then
+  die "the 'golden' snapshot was built from different setup scripts.
+    Anything setup.sh installs on the machine is baked into that snapshot, so
+    arming it would use the OLD baseline. Run:  ./plp provision"
+fi
+ok "baseline matches"
+
 say "Re-checking the baseline before arming"
 vssh "sudo test -x /opt/plp-exam/vm/healthcheck.sh" 2>/dev/null \
   || die "no harness on the VM — run ./plp provision first"
@@ -20,7 +30,7 @@ vssh "sudo bash /opt/plp-exam/vm/healthcheck.sh" >/dev/null 2>&1 \
 ok "baseline clean"
 
 vssh "sudo bash /opt/plp-exam/bin/exam-ctl.sh arm" || die "arming failed"
-ok "six scenarios armed"
+ok "all scenarios armed"
 
 say "Installing the candidate bundle and removing the harness"
 vssh "echo yes | sudo bash /opt/plp-exam/bin/seal.sh" || die "seal failed"
