@@ -1,0 +1,264 @@
+% PLP Selection Examination — Part B (practical)
+% Layout follows the ISI Computing Laboratory lab-test papers.
+% Build:  pdflatex docs/exam-paper.tex
+% Keep in step with scenarios/*/ticket.md — the VM serves those, this is print.
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in,top=0.9in,bottom=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{framed}
+\usepackage{xcolor}
+\usepackage{fancyvrb}
+\usepackage{array}
+\usepackage[T1]{fontenc}
+
+\pagestyle{plain}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+
+% shell listings, as the sample paper sets sample input/output
+\DefineVerbatimEnvironment{shell}{Verbatim}{fontsize=\small,xleftmargin=1.5em}
+
+\newcommand{\hd}[1]{\medskip\textbf{#1}\par\nopagebreak}
+
+\begin{document}
+
+%----------------------------------------------------------------- header
+\begin{center}
+  {\large\textbf{INDIAN STATISTICAL INSTITUTE}}\\[0.6em]
+  Project Linked Person --- Selection \qquad 2026--2027\\[0.35em]
+  Subject: Systems Support (Software, Hardware and Web)\\[0.35em]
+  Part B --- Practical Examination\\[0.35em]
+  Total: $16 + 18 + 16 = 50$ marks \qquad Duration: 90 minutes
+\end{center}
+
+\begin{framed}
+\begin{center}\textbf{EXAMINATION INSTRUCTIONS}\end{center}
+\begin{enumerate}[leftmargin=1.5em,itemsep=0.35em,topsep=0.3em]
+  \item You have root on a virtual machine. It is a disposable clone: you
+        cannot damage anything that matters, and it is connected to no real
+        network. Log in with
+        \verb|ssh candidate@192.168.56.10|.
+  \item Each question has four parts --- \emph{the problem}, \emph{how to
+        reproduce it}, \emph{what to fix}, and \emph{how to check your work}.
+        Run the checks yourself; you should not have to guess whether you are
+        finished.
+  \item \textcolor{red}{\textbf{The \emph{Constraints} of every question are
+        marked. Breaking a constraint loses marks even when the symptom goes
+        away.} Examples: \texttt{chmod 777}, pinning names into
+        \texttt{/etc/hosts}, reformatting a filesystem.}
+  \item Keep \verb|~/FIXLOG.md| up to date as you go: symptom, cause, what you
+        changed, and how you verified it. It is marked, and there is a short
+        oral discussion of your work afterwards.
+  \item You are not expected to know all of this in advance. Partial credit is
+        real: a fault you diagnose correctly and explain, but cannot finish,
+        is worth more than one you paper over.
+\end{enumerate}
+\end{framed}
+
+\textbf{NOTE:} \texttt{man}, \verb|--help|, \texttt{journalctl} and the logs
+under \texttt{/var/log} are all available on the machine. Your commands are
+recorded. Questions may be attempted in any order.
+
+%----------------------------------------------------------------- questions
+\begin{enumerate}[label=\textbf{Q\arabic*.},leftmargin=2.6em,labelsep=0.6em,itemsep=1.6em,topsep=1.2em]
+
+%================================================================== Q1
+\item \textbf{Disk full on the lab file server.} \hfill [16 marks]
+
+\emph{Reported by a research scholar:} ``The reporting log stopped updating
+before 07:00. I cannot copy anything into \texttt{/srv/data} --- it says the
+disk is full. Submitting a job into \texttt{/srv/spool} \emph{also} says the
+disk is full, but \texttt{df -h} shows that one has plenty of space left. That
+part makes no sense to me.''
+
+Two storage faults, on two different filesystems. \texttt{/srv/data} is
+genuinely full, so the reporting daemon can no longer write. \texttt{/srv/spool}
+refuses to create files \emph{although \texttt{df} reports free space} ---
+something other than free bytes has run out.
+
+\hd{How to reproduce it}
+\begin{shell}
+df -h /srv/data
+tail -1 /srv/data/logs/reportd.log     # last entry is hours old
+df -h /srv/spool                       # shows space free
+touch /srv/spool/incoming/testjob      # "No space left on device"
+sudo du -sh /srv/data                  # smaller than df says is in use
+\end{shell}
+
+\hd{What to fix}
+\begin{enumerate}[label=\textbf{\arabic{enumi}.\arabic*},leftmargin=2.8em,itemsep=0.3em]
+  \item Bring \texttt{/srv/data} back to \textbf{under 10\% used} (the
+        \texttt{Use\%} column of \texttt{df -h}). Freeing the largest obvious
+        files will not get you there on its own. Treat any difference between
+        what \texttt{df} says is used and what \texttt{du} can account for as
+        something you still have to explain.
+  \item Get the reporting daemon writing to
+        \texttt{/srv/data/logs/reportd.log} again. It is running; its writes
+        were failing. Check the last line's timestamp rather than assuming.
+  \item Make \texttt{/srv/spool} able to accept new files. It is a separate
+        filesystem with a separate fault and it is \emph{not} short of space:
+        freeing bytes there will not help. A filesystem can exhaust more than
+        one kind of resource, and \texttt{df} has another mode that reports the
+        other one.
+  \item In \verb|~/FIXLOG.md|, explain in two or three sentences why
+        \texttt{/srv/spool} reported ``No space left on device'' while
+        \texttt{df} showed free space.
+\end{enumerate}
+
+\hd{How to check your work}
+\begin{shell}
+df -h /srv/data                       # Use% under 10%
+sudo systemctl restart reportd; sleep 5
+tail -1 /srv/data/logs/reportd.log    # timestamp within the last few seconds
+touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
+ls /srv/data/current                  # five survey-block CSV files, still there
+\end{shell}
+
+\hd{Constraints --- these are marked}
+\begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
+  \item Nothing under \texttt{/srv/data/current} may be deleted or changed.
+        It is live survey data with no second copy on this machine.
+  \item Do not reformat, recreate, resize or unmount either filesystem.
+  \item \texttt{/srv/data/archive/README.txt} says what is safe to remove
+        there. Read it before deleting anything.
+  \item Rebooting clears one of these faults. On a real file server at 11am
+        you would not have that option; treat it as unavailable.
+\end{itemize}
+
+%================================================================== Q2
+\item \textbf{Shared project folder unusable.} \hfill [18 marks]
+
+\emph{Reported for the Statistics Lab group:} ``Bikram cannot save anything
+into \texttt{shared/}, and cannot open \texttt{notes.md} at all. When I create
+a file there, the others cannot edit it --- it comes out belonging to my own
+personal group instead of the project group.
+\texttt{sudo systemctl restart reportd} used to work for all of us; now it is
+refused. And Chandan from the internal audit cell needs to \emph{read} that
+folder for the annual review. He cannot see anything.''
+
+\texttt{/srv/projects/statlab/} is a shared area for the \texttt{statlab}
+group. Several things about it have been changed, and the auditor has no
+access at all.
+
+\hd{How to reproduce it}
+\begin{shell}
+sudo -u bikram touch /srv/projects/statlab/shared/test     # Permission denied
+sudo -u bikram cat /srv/projects/statlab/shared/notes.md   # Permission denied
+sudo -u anita sudo -n systemctl restart reportd            # refused
+sudo -u chandan cat /srv/projects/statlab/shared/notes.md  # Permission denied
+
+stat -c '%a %U:%G %n' /srv/projects/statlab
+id bikram ; getfacl /srv/projects/statlab
+sudo cat /etc/sudoers.d/statlab
+\end{shell}
+
+\hd{What to fix}
+\begin{enumerate}[label=\textbf{\arabic{enumi}.\arabic*},leftmargin=2.8em,itemsep=0.25em]
+  \item Everyone in \texttt{statlab} can read and write everything under
+        \texttt{/srv/projects/statlab/}.
+  \item A file created there by one member ends up usable by the whole group.
+  \item \texttt{notes.md} is a shared file again, not one person's private file.
+  \item Members of \texttt{statlab} --- and only them --- can run
+        \texttt{sudo -n systemctl restart reportd} without a password.
+  \item Chandan can \textbf{read} that tree.
+\end{enumerate}
+
+\hd{How to check your work}
+Test as the affected users, not as root.
+\begin{shell}
+sudo -u bikram touch /srv/projects/statlab/shared/t1 && echo "write OK"
+stat -c '%U:%G' /srv/projects/statlab/shared/t1    # group must be: statlab
+sudo rm -f /srv/projects/statlab/shared/t1
+sudo -u bikram cat /srv/projects/statlab/shared/notes.md >/dev/null && echo "read OK"
+sudo -u anita sudo -n systemctl restart reportd && echo "sudo OK"
+sudo -u chandan cat /srv/projects/statlab/shared/notes.md >/dev/null && echo "auditor read OK"
+sudo -u chandan touch /srv/projects/statlab/shared/t2 && echo "PROBLEM: auditor can write"
+\end{shell}
+The second line is the one people miss. If the group comes out as anything
+other than \texttt{statlab}, the second complaint is not fixed yet.
+
+\hd{Constraints --- these are marked}
+\begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
+  \item \textbf{Chandan must not be put into the \texttt{statlab} group.}
+        Audit policy forbids putting auditors into the groups they audit. He
+        must be able to read and must \emph{not} be able to write.
+  \item No \texttt{chmod 777}, anywhere. This is a multi-user machine.
+  \item Do not change anyone's login shell, password or home directory.
+\end{itemize}
+
+\emph{Hint.} One of these faults is about which \textbf{bits are set on a
+directory}, not about who owns it --- a directory carries more than the nine
+permission bits you see first. Group membership changes do not affect a shell
+that is already open. Edit anything under \texttt{/etc/sudoers.d/} with
+\texttt{visudo -f}.
+
+%================================================================== Q3
+\item \textbf{Campus names stopped resolving.} \hfill [16 marks]
+
+\emph{Reported by the systems group:} ``This host cannot resolve any campus
+name since the patching window. \texttt{ping www.isi.local} sits there for
+several seconds and then fails. The odd one is \texttt{portal.isi.local} ---
+that \emph{does} answer, but with an address that has not been ours since 2023.
+Please do not paper over this with hosts-file entries; we have forty more
+machines behind this one.''
+
+The host runs its own resolver (\textbf{dnsmasq}) serving the
+\texttt{isi.local} zone and forwarding everything else upstream. The addresses
+it is supposed to hand out:
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l @{\qquad} >{\ttfamily}l}
+\textrm{\textbf{name}} & \textrm{\textbf{address}}\\[0.15em]
+www.isi.local     & 127.0.0.1\\
+statlab.isi.local & 127.0.0.1\\
+portal.isi.local  & 127.0.0.1\\
+git.isi.local     & 10.10.10.9\\
+nas.isi.local     & 10.10.10.20\\
+\end{tabular}
+\end{center}
+
+\hd{How to reproduce it}
+\begin{shell}
+getent hosts www.isi.local        # nothing, after a long pause
+getent hosts git.isi.local        # nothing
+getent hosts portal.isi.local     # answers 192.0.2.77 -- wrong address
+
+dig +short @127.0.0.1 git.isi.local
+systemctl status dnsmasq
+\end{shell}
+
+\hd{What to fix}
+\begin{enumerate}[label=\textbf{\arabic{enumi}.\arabic*},leftmargin=2.8em,itemsep=0.25em]
+  \item All five names resolve to the correct addresses, for every user on the
+        host, in under a second.
+  \item The answers come from the resolver, not from a local file.
+  \item It still works after a reboot.
+\end{enumerate}
+
+\hd{How to check your work}
+\begin{shell}
+for n in www statlab portal git nas; do
+  printf '%-22s %s\n' "$n.isi.local" "$(getent hosts $n.isi.local | awk '{print $1}')"
+done
+dig +short @127.0.0.1 git.isi.local     # must print 10.10.10.9
+grep -i isi.local /etc/hosts            # must print nothing at all
+systemctl is-active dnsmasq ; systemctl is-enabled dnsmasq
+\end{shell}
+
+\hd{Constraints --- these are marked}
+\begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
+  \item \textbf{Do not put \texttt{isi.local} names into \texttt{/etc/hosts}.}
+        The systems group will not maintain hosts files across forty machines.
+        It makes the symptom disappear and loses marks.
+  \item Do not make \texttt{/etc/resolv.conf} immutable
+        (\texttt{chattr +i}) to hold a fix in place.
+\end{itemize}
+
+\emph{Hint.} There is more than one fault and they are in different layers. A
+useful order to think in: \emph{is a DNS query being sent at all? where is it
+being sent? is anything answering? is the answer correct?} A service that
+refuses to start will usually say why, in its own log. The long pause before
+failure is itself a clue about which layer is wrong.
+
+\end{enumerate}
+\end{document}

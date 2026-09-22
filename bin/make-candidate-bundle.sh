@@ -36,20 +36,24 @@ for d in "$HERE"/scenarios/*/; do
 done
 
 # --- 3. a combined copy for printing --------------------------------------
-# The printable pack carries the common heading ONCE at the top, then the six
-# tickets, one per page. (The per-ticket files each carry their own copy, since
-# a candidate reads those individually on the VM.)
-{
-  cat "$HEADER"
-  echo
-  echo "The six tickets follow, one per page."
-  for d in "$HERE"/scenarios/*/; do
-    echo
-    echo '<div style="page-break-after: always"></div>'
-    echo
-    cat "$d/ticket.md"
-  done
-} > "$OUT/ALL-TICKETS.md"
+# The printable paper is a LaTeX document laid out like the ISI Computing
+# Laboratory lab tests. It is authored in docs/exam-paper.tex and must be kept
+# in step with the ticket files by hand -- the VM serves the Markdown, the
+# invigilator hands out the PDF.
+PAPER="$HERE/docs/exam-paper.tex"
+if [ -f "$PAPER" ]; then
+  cp "$PAPER" "$OUT/ALL-TICKETS.tex"
+  if command -v pdflatex >/dev/null 2>&1; then
+    ( cd "$OUT" && pdflatex -interaction=batchmode -halt-on-error ALL-TICKETS.tex >/dev/null 2>&1 \
+        && pdflatex -interaction=batchmode -halt-on-error ALL-TICKETS.tex >/dev/null 2>&1 )
+    rm -f "$OUT"/ALL-TICKETS.{aux,log,out,toc}
+    [ -f "$OUT/ALL-TICKETS.pdf" ] || echo "note: pdflatex did not produce a PDF" >&2
+  else
+    echo "note: pdflatex not installed - ALL-TICKETS.tex not compiled" >&2
+  fi
+else
+  echo "note: $PAPER missing - no printable paper in this bundle" >&2
+fi
 
 # --- 4. the FIXLOG the candidate fills in ---------------------------------
 cat > "$OUT/FIXLOG.md" <<'TPL'
@@ -80,7 +84,7 @@ TPL
 
 # --- 5. leak check: nothing examiner-only may appear ----------------------
 fail=0
-ALLOW='^(00-READ-ME-FIRST\.md|ALL-TICKETS\.md|FIXLOG\.md|tickets/[0-9]{2}-[a-z]+\.md)$'
+ALLOW='^(00-READ-ME-FIRST\.md|ALL-TICKETS\.(tex|pdf)|FIXLOG\.md|tickets/[0-9]{2}-[a-z]+\.md)$'
 while IFS= read -r rel; do
   [[ $rel =~ $ALLOW ]] || { echo "LEAK: unexpected file in bundle: $rel" >&2; fail=1; }
 done < <(cd "$OUT" && find . -type f | sed 's|^\./||')
