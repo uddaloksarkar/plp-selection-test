@@ -26,8 +26,7 @@
 \begin{center}
   {\large\textbf{INDIAN STATISTICAL INSTITUTE}}\\[0.6em]
   Project Linked Person --- Selection \qquad 2026--2027\\[0.35em]
-  Subject: Systems Support (Software, Hardware and Web)\\[0.35em]
-  Part B --- Practical Examination\\[0.35em]
+  Practical Examination\\[0.35em]
   Total: $14 + 16 + 10 = 40$ marks \qquad Duration: 90 minutes
 \end{center}
 
@@ -35,26 +34,12 @@
 \begin{center}\textbf{EXAMINATION INSTRUCTIONS}\end{center}
 \begin{enumerate}[leftmargin=1.5em,itemsep=0.35em,topsep=0.3em]
   \item You have root on a virtual machine. It is connected to no real network. Log in with \verb|ssh candidate@192.168.56.10|.
-  \item Each question has four parts --- \emph{the problem}, \emph{how to
-        reproduce it}, \emph{what to fix}, and \emph{how to check your work}.
-        Run the checks yourself; you should not have to guess whether you are
-        finished.
-  \item \textcolor{red}{\textbf{The \emph{Constraints} of every question are
-        marked. Breaking a constraint loses marks even when the symptom goes
-        away.} Examples: \texttt{chmod 777}, pinning names into
-        \texttt{/etc/hosts}, reformatting a filesystem.}
-  \item Keep \verb|~/FIXLOG.md| up to date as you go: symptom, cause, what you
-        changed, and how you verified it. It is marked, and there is a short
-        oral discussion of your work afterwards.
-  \item You are not expected to know all of this in advance. Partial credit is
-        real: a fault you diagnose correctly and explain, but cannot finish,
-        is worth more than one you paper over.
+  \item Each question has four parts: \emph{the problem}, \emph{how to
+        reproduce it}, \emph{what to fix}, and \emph{how to check your work} (so that you do not have to guess whether you are
+        finished).
+  \item Partial credit would be given if you can explain the problem and the reason behind, even if you cannot fix it. 
 \end{enumerate}
 \end{framed}
-
-\textbf{NOTE:} \texttt{man}, \verb|--help|, \texttt{journalctl} and the logs
-under \texttt{/var/log} are all available on the machine. Your commands are
-recorded. Questions may be attempted in any order.
 
 %----------------------------------------------------------------- questions
 \begin{enumerate}[label=\textbf{Q\arabic*.},leftmargin=2.6em,labelsep=0.6em,itemsep=1.6em,topsep=1.2em]
@@ -62,7 +47,7 @@ recorded. Questions may be attempted in any order.
 %================================================================== Q1
 \item \textbf{Disk full on the lab file server.} \hfill [14 marks]
 
-\emph{Reported by Debarshi Roy, research scholar:} ``I cannot copy anything into
+\emph{Reported by Debarshi, research scholar:} ``I cannot copy anything into
 \texttt{/srv/data}, it says the disk is full, and nothing I can see in there
 accounts for that much space. Submitting a job into \texttt{/srv/spool}
 \emph{also} says the disk is full, but \texttt{df -h} shows that one has plenty
@@ -86,10 +71,7 @@ Each disk fills up on its own: one being full says nothing about the others.
 \verb|df -h / /srv/data /srv/spool| prints one line per disk.
 \end{framed}
 
-The two complaints look alike --- both end in ``No space left on device'' ---
-but they are \textbf{two unrelated faults on two different disks}, with
-different causes. Fixing one does nothing for the other. Tackle them in either
-order; each is marked on its own.
+Though the two complaints look alike, they are \textbf{two unrelated faults on two different disks}, with different causes. Fixing one does nothing for the other. 
 
 %------------------------------------------------------------------ Q1(a)
 \hd{(a)\enspace \texttt{/srv/data} is full \hfill [11 marks]}
@@ -104,9 +86,7 @@ sudo du -sh /srv/data                  # much smaller than df says is in use
 
 \textit{Fix:} bring \texttt{/srv/data} back to \textbf{under 10\% used} (the
 \texttt{Use\%} column of \texttt{df -h}). There is more than one reason this
-disk is full: freeing the largest obvious files will not get you there on its
-own. Treat any difference between what \texttt{df} says is used and what
-\texttt{du} can account for as something you still have to explain.
+disk is full: freeing the largest obvious files will not finish the job. Consider the differences shown in the output of \texttt{df} and \texttt{du}. Explain the reason for the difference.
 
 \textit{Check:}
 \begin{shell}
@@ -129,9 +109,7 @@ touch /srv/spool/incoming/testjob      # "No space left on device"
 \textit{Fix:} make \texttt{/srv/spool} able to accept new files again. It is
 \emph{not} short of space: freeing bytes there will not help. A filesystem can
 run out of more than one kind of resource, and \texttt{df} has another mode
-that reports the other one. Then, in \verb|~/FIXLOG.md|, explain in two or
-three sentences why \texttt{/srv/spool} reported ``No space left on device''
-while \texttt{df -h} showed free space.
+that reports the other one. Explain why \texttt{/srv/spool} reported ``No space left on device'' while \texttt{df -h} showed free space.
 
 \textit{Check:}
 \begin{shell}
@@ -142,11 +120,8 @@ touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
 \begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
   \item Nothing under \texttt{/srv/data/current} may be deleted or changed.
         It is live survey data with no second copy on this machine.
-  \item Do not reformat, recreate, resize or unmount either disk.
   \item \texttt{/srv/data/archive/README.txt} says what is safe to remove
         there. Read it before deleting anything.
-  \item Rebooting clears one of these faults. On a real file server at 11am
-        you would not have that option; treat it as unavailable.
 \end{itemize}
 
 %================================================================== Q2
@@ -251,21 +226,15 @@ open; \texttt{sudo -u} \textit{user} starts a fresh one.
 %================================================================== Q3
 \item \textbf{Cannot log in to the ACMU lab server.} \hfill [10 marks]
 
-\emph{Reported by Debarshi Roy, research scholar:} ``I am supposed to log in to
-the lab server as \texttt{acmusrv} with the key the systems group set up for
-me, and run the nightly extract. It worked last week. Now it just says
+\emph{Reported by Debarshi, research scholar:} ``I am supposed to log in to
+the lab server as \texttt{acmusrv}. It worked last week. Now it just says
 \emph{Permission denied}, and then asks me for a password I was never given. I
 have not touched anything since.''
 
 \texttt{ssh acmulab} should log you in to the account \texttt{acmusrv} on the
-lab server using the key \verb|~/.ssh/id_acmu|, \textbf{without a password} ---
-that account has no password to type.
-
+lab server using the key \verb|~/.ssh/id_acmu|, \textbf{without a password}.
 Two things are wrong, and they produce the \textbf{same message}:
-\texttt{Permission denied (publickey)}. The first means the key is never
-offered at all; the second means it is offered and then refused. Fixing one and
-trying again will look like nothing happened, so work out which you are looking
-at before you change anything.
+\texttt{Permission denied (publickey)}. Identify both of them. 
 
 \hd{How to reproduce it}
 \begin{shell}
@@ -278,12 +247,11 @@ ls -l ~/.ssh/
 
 \hd{What to fix \hfill [10 marks]}
 \begin{enumerate}[label=\textbf{\arabic{enumi}.\arabic*},leftmargin=2.8em,itemsep=0.3em]
-  \item \textbf{Make the \texttt{acmulab} alias use the right key.} One line is
-        missing from its block in \verb|~/.ssh/config|; everything else in that
-        block is correct.
-  \item \textbf{Make the key usable.} SSH refuses to use a private key that
-        other people on the machine could read, and says so plainly under
-        \texttt{-v}.
+  \item \textbf{Make the \texttt{acmulab} alias use the right key.} 
+  The \verb|~/.ssh/config| file is corrupted. Fix it so that \texttt{ssh acmulab} succeeds without a password prompt.
+
+  \item \textbf{Make the key usable.} 
+  Find out why ssh still refuses to use the key, and fix it.
 \end{enumerate}
 
 \hd{How to check you have fixed it}
@@ -294,10 +262,6 @@ ls -l ~/.ssh/id_acmu                    # -rw------- (0600)
 \texttt{BatchMode=yes} forbids any password prompt, so if this prints
 \texttt{acmusrv} the key really is doing the work.
 
-\emph{Hint.} \texttt{ssh -v} is the whole diagnosis: it prints which key files
-it considered, which it offered, and what the server said. \emph{Permission
-denied} means something answered and said no --- quite different from
-\emph{Connection refused}, which means nothing was listening at all. 
 
 \end{enumerate}
 \end{document}
