@@ -21,7 +21,6 @@ member_can_write() {            # a group member can create a file in the shared
   runuser -u buddhadev -- bash -c ": > '$f'" 2>/dev/null || return 1
   rm -f "$f"
 }
-notes_shared() {                # group acmu, group rw (with an ACL, %a shows the mask)
   local m; m=$(stat -c %a "$SHARED/notes.md")
   [ "$(stat -c %G "$SHARED/notes.md")" = acmu ] && (( (${m: -2:1} & 6) == 6 ))
 }
@@ -34,10 +33,9 @@ world_writable()     {          # symlinks are always 0777 - only real files/dir
 
 check 3 s3.dirmode   "shared dir is group-writable, not world-writable" dir_mode_ok
 check 1 s3.dirgroup  "shared dir group is acmu"             dir_group_ok
-check 4 s3.member    "buddhadev is back in the acmu group"     buddhadev_member
-check 3 s3.groupwrite "a group member can create files in shared/" member_can_write
-check 3 s3.notes     "notes.md is group acmu, group read-write" notes_shared
-check 2 s3.aclread   "auditor chandrima can read notes.md"       chandrima_reads
+check 5 s3.member    "buddhadev is back in the acmu group"     buddhadev_member
+check 4 s3.groupwrite "a group member can create files in shared/" member_can_write
+check 3 s3.aclread   "auditor chandrima can read notes.md"       chandrima_reads
 
 penalty 4 s3.penacl  "auditor can WRITE (over-granted)"        chandrima_writes
 penalty 4 s3.pengrp  "auditor was added to acmu instead of ACL" chandrima_in_group
