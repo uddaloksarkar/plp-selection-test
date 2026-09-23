@@ -67,8 +67,6 @@ The rest of the system lives on a third, much larger disk.
 \end{tabular}
 \smallskip
 
-Each disk fills up on its own: one being full says nothing about the others.
-\verb|df -h / /srv/data /srv/spool| prints one line per disk.
 \end{framed}
 
 Though the two complaints look alike, they are \textbf{two unrelated faults on two different disks}, with different causes. Fixing one does nothing for the other. 
@@ -76,7 +74,7 @@ Though the two complaints look alike, they are \textbf{two unrelated faults on t
 %------------------------------------------------------------------ Q1(a)
 \hd{(a)\enspace \texttt{/srv/data} is full \hfill [11 marks]}
 \texttt{/srv/data} is at 100\%, and the files you can see there do not add up
-to the space reported as used.
+to the space reported.
 
 \textit{Reproduce:}
 \begin{shell}
@@ -86,7 +84,7 @@ sudo du -sh /srv/data                  # much smaller than df says is in use
 
 \textit{Fix:} bring \texttt{/srv/data} back to \textbf{under 10\% used} (the
 \texttt{Use\%} column of \texttt{df -h}). There is more than one reason this
-disk is full: freeing the largest obvious files will not finish the job. Consider the differences shown in the output of \texttt{df} and \texttt{du}. Explain the reason for the difference.
+disk is full: freeing the largest files may not work. Observe the differences shown in the output of \texttt{df} and \texttt{du}. Explain the reason behind the difference.
 
 \textit{Check:}
 \begin{shell}
@@ -106,10 +104,7 @@ df -h /srv/spool                       # shows space free
 touch /srv/spool/incoming/testjob      # "No space left on device"
 \end{shell}
 
-\textit{Fix:} make \texttt{/srv/spool} able to accept new files again. It is
-\emph{not} short of space: freeing bytes there will not help. A filesystem can
-run out of more than one kind of resource, and \texttt{df} has another mode
-that reports the other one. Explain why \texttt{/srv/spool} reported ``No space left on device'' while \texttt{df -h} showed free space.
+\textit{Fix:} make \texttt{/srv/spool} able to accept new files again. The current problem is not due to a lack of free space in the disk. Explain why \texttt{/srv/spool} reported ``No space left on device'' while \texttt{df -h} showed free space.
 
 \textit{Check:}
 \begin{shell}
@@ -119,7 +114,6 @@ touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
 \hd{Constraints}
 \begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
   \item Nothing under \texttt{/srv/data/current} may be deleted or changed.
-        It is live survey data with no second copy on this machine.
   \item \texttt{/srv/data/archive/README.txt} says what is safe to remove
         there. Read it before deleting anything.
 \end{itemize}
@@ -128,7 +122,7 @@ touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
 \item \textbf{Shared project folder unusable.} \hfill [16 marks]
 
 \emph{Reported for the ACMU Lab group:} ``Buddhadev cannot save anything into
-\texttt{shared/}--- he could last
+\texttt{shared/} which he could last
 month. And Chandrima from the internal audit cell needs to \emph{read} that
 folder for the annual review, and cannot see anything at all.''
 
@@ -156,7 +150,6 @@ getfacl /srv/projects/acmu/shared
 
 Underneath the two complaints are \textbf{three independent faults}, each with
 its own cause and fix, each marked on its own. Take them in any order.
-
 \textbf{Test as the users named, not as root.} Root can do everything, so a
 check run as root proves nothing.
 
@@ -167,9 +160,7 @@ check run as root proves nothing.
 
 %------------------------------------------------------------------ Q2(b)
 \hd{(b)\enspace The shared folder does not let the group write \hfill [8 marks]}
-Members of \texttt{acmu} cannot create files in the folder at all. This is
-about the permission bits on the two directories, \texttt{/srv/projects/acmu}
-and \texttt{shared/}. Arnab is still a member, so test as arnab.
+Members of \texttt{acmu} cannot create files in the folder at all. Arnab is still a member, so test as arnab:
 \begin{shell}
 sudo -u arnab touch /srv/projects/acmu/shared/t1     # Permission denied
 stat -c '%a %U:%G %n' /srv/projects/acmu /srv/projects/acmu/shared
@@ -224,8 +215,6 @@ Two things are wrong, and they produce the \textbf{same message}:
 \hd{How to reproduce it}
 \begin{shell}
 ssh acmulab
-
-ssh -v acmulab 2>&1 | grep -i 'identity file\|offering\|publickey'
 cat ~/.ssh/config
 ls -l ~/.ssh/
 \end{shell}
@@ -241,11 +230,11 @@ ls -l ~/.ssh/
 
 \hd{How to check you have fixed it}
 \begin{shell}
-ssh -o BatchMode=yes acmulab whoami     # prints: acmusrv
+ssh acmulab whoami                      # prints: acmusrv
 ls -l ~/.ssh/id_acmu                    # -rw------- (0600)
 \end{shell}
-\texttt{BatchMode=yes} forbids any password prompt, so if this prints
-\texttt{acmusrv} the key really is doing the work.
+If that prints \texttt{acmusrv} without asking you for anything, the key is
+doing the work.
 
 
 \end{enumerate}

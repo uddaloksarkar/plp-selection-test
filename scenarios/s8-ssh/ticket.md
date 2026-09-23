@@ -48,11 +48,11 @@ password prompt.
 ## 4. How to check you have fixed it
 
 ```bash
-ssh -o BatchMode=yes acmulab whoami     # prints: acmusrv
+ssh acmulab whoami                      # prints: acmusrv
 ```
 
-`BatchMode=yes` forbids any password prompt, so if this prints `acmusrv` the
-key really is doing the work.
+If that prints `acmusrv` without asking you for anything, the key is doing the
+work.
 
 ```bash
 ls -l ~/.ssh/id_acmu                    # -rw------- (0600)
