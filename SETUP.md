@@ -174,7 +174,7 @@ anyway, `./plp rearm` puts it back.
 - [ ] Smoke test passed
 - [ ] `CAND_PASSWORD` set for this sitting and written on the board
 - [ ] Screen recording running on the host desktop
-- [ ] If handing out paper: `build/candidate-bundle/ALL-TICKETS.md` printed
+- [ ] If handing out paper: the paper printed (`pdflatex -output-directory=/tmp docs/exam-paper.tex`)
 
 **How the candidate works**
 

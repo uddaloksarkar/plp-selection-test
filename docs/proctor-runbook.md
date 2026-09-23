@@ -30,7 +30,7 @@ one's machine.
 - [ ] `ssh candidate@192.168.56.10` works with this sitting's password
 - [ ] Screen recording configured on the host desktop
 - [ ] Printed pack ready if you are handing out paper:
-      `build/candidate-bundle/ALL-TICKETS.md`
+      `docs/exam-paper.tex`, compiled to PDF
 
 ### How the candidate works
 
