@@ -127,21 +127,20 @@ touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
 %================================================================== Q2
 \item \textbf{Shared project folder unusable.} \hfill [16 marks]
 
-\emph{Reported for the ACMU Lab group:} ``Buddhadev cannot save anything
-into \texttt{shared/}, and cannot open \texttt{notes.md} at all. When I create
-a file there, the others cannot edit it --- it comes out belonging to my own
-refused. And Chandrima from the internal audit cell needs to \emph{read} that
-folder for the annual review. He cannot see anything.''
+\emph{Reported for the ACMU Lab group:} ``Buddhadev cannot save anything into
+\texttt{shared/}--- he could last
+month. And Chandrima from the internal audit cell needs to \emph{read} that
+folder for the annual review, and cannot see anything at all.''
 
 \begin{framed}
 \textbf{Background: who is who.} \texttt{/srv/projects/acmu/} (and
-\texttt{shared/} inside it) belongs to the \texttt{acmu} group. Anyone who
-is not a member or the auditor should have no access at all.
+\texttt{shared/} inside it) belongs to the \texttt{acmu} group. Anyone who is
+neither a member nor the auditor should have no access at all.
 
 \smallskip
 \begin{tabular}{@{}>{\ttfamily}l l l@{}}
-arnab   & member of \texttt{acmu} & read and write everything \\
-buddhadev  & member of \texttt{acmu} & read and write everything \\
+arnab     & member of \texttt{acmu}        & read and write everything \\
+buddhadev & member of \texttt{acmu}        & read and write everything \\
 chandrima & auditor, \textbf{not} a member & read everything, write nothing \\
 \end{tabular}
 \smallskip
@@ -150,78 +149,64 @@ To see the current state:
 \begin{shell}
 cd /srv/projects/acmu
 stat -c '%a %U:%G %n' . shared shared/notes.md
-id buddhadev; getfacl /srv/projects/acmu/shared
+id buddhadev
+getfacl /srv/projects/acmu/shared
 \end{shell}
 \end{framed}
 
-The complaints overlap, but underneath them are \textbf{five independent
-faults}, each with its own cause and fix. Fixing one does nothing for the
-others; each is marked on its own. Tackle them in any order. Test as the users
-named, not as root --- root can do everything, so a check run as root proves
-nothing.
+Underneath the two complaints are \textbf{three independent faults}, each with
+its own cause and fix, each marked on its own. Take them in any order.
+
+\textbf{Test as the users named, not as root.} Root can do everything, so a
+check run as root proves nothing.
 
 %------------------------------------------------------------------ Q2(a)
-\hd{(a)\enspace Buddhadev is no longer in the \texttt{acmu} group \hfill [4 marks]}
-\textit{Reproduce:} \verb|id buddhadev| --- \texttt{acmu} is missing.
-\textit{Fix:} put him back, without changing any of his other groups.
-\begin{shell}
-id -nG buddhadev | grep -qw acmu && echo "buddhadev is a member"
-\end{shell}
+\hd{(a)\enspace Buddhadev is no longer in the \texttt{acmu} group \hfill [5 marks]}
+\textit{Reproduce:} Check \verb|id buddhadev| where \texttt{acmu} is missing.
+\textit{Fix:} put him back, without disturbing his other groups. Keep checking with \verb|id buddhadev| until it shows \texttt{acmu} again.
 
 %------------------------------------------------------------------ Q2(b)
-\hd{(b)\enspace The shared folder does not let the group write \hfill [7 marks]}
+\hd{(b)\enspace The shared folder does not let the group write \hfill [8 marks]}
 Members of \texttt{acmu} cannot create files in the folder at all. This is
 about the permission bits on the two directories, \texttt{/srv/projects/acmu}
-and \texttt{shared/}. Arnab is still a member, so test as her.
+and \texttt{shared/}. Arnab is still a member, so test as arnab.
 \begin{shell}
 sudo -u arnab touch /srv/projects/acmu/shared/t1     # Permission denied
 stat -c '%a %U:%G %n' /srv/projects/acmu /srv/projects/acmu/shared
 \end{shell}
 \textit{Fix:} both directories must let the \texttt{acmu} group read, write and
-enter them, and give everyone else no write access. Remember that a directory
-needs its execute bit before anyone can go into it at all.
+enter them, and give everyone else no write access. 
+
 \begin{shell}
 sudo -u arnab touch /srv/projects/acmu/shared/t1 && echo "write OK"
 sudo rm -f /srv/projects/acmu/shared/t1
 \end{shell}
 
-\hd{(c)\enspace \texttt{notes.md} has become private \hfill [3 marks]}
-\texttt{shared/notes.md} is the group's working file, but now belongs to one
-person and only she can read it. \textit{Fix:} group \texttt{acmu},
-readable and writable by the group, no access for anyone else.
-\begin{shell}
-stat -c '%a %G' /srv/projects/acmu/shared/notes.md    # 660 acmu
-\end{shell}
-
-%------------------------------------------------------------------ Q2(d)
-\hd{(d)\enspace The auditor cannot read the folder \hfill [2 marks]}
-Chandrima's access came from per-user entries on the files themselves, and those
-have been wiped. \textit{Fix:} give him read-only access to everything under
-\texttt{/srv/projects/acmu/}, including files created there in future ---
-\emph{without} adding him to the group.
+%------------------------------------------------------------------ Q2(c)
+\hd{(c)\enspace The auditor cannot read the folder \hfill [3 marks]}
+\textit{Fix:} grant read-only access to everything under
+\texttt{/srv/projects/acmu/}, including files created there in future, and do
+it \emph{without} adding chandrima to the group.
 \begin{shell}
 sudo -u chandrima cat /srv/projects/acmu/shared/notes.md   # must work
 sudo -u chandrima touch /srv/projects/acmu/shared/t2       # must FAIL
 \end{shell}
 
-\hd{When all five are done}
-Buddhadev's original complaint needs (a), (b) and (c) together:
+\hd{When all three are done}
+Buddhadev's complaint needs (a) and (b) together:
 \begin{shell}
 sudo -u buddhadev touch /srv/projects/acmu/shared/t3        # must work
 sudo -u buddhadev cat /srv/projects/acmu/shared/notes.md    # must work
 \end{shell}
 
-\hd{Constraints --- these apply to every part, and are marked}
+\hd{Constraints}
 \begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
   \item \textbf{Chandrima must not be put into the \texttt{acmu} group.}
-        Audit policy forbids putting auditors into the groups they audit. He
-        must be able to read and must \emph{not} be able to write.
+        Audit policy forbids putting auditors into the groups they audit:
+        read everything, write nothing.
   \item No \texttt{chmod 777}, anywhere. This is a multi-user machine.
-  \item Do not change anyone's login shell, password or home directory.
 \end{itemize}
 
-\emph{Hint.} Group membership changes do not affect a shell that is already
-open; \texttt{sudo -u} \textit{user} starts a fresh one.
 
 %================================================================== Q3
 \item \textbf{Cannot log in to the ACMU lab server.} \hfill [10 marks]
