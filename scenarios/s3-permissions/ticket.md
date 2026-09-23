@@ -3,12 +3,10 @@
 **Raised by:** Arnab Basu, on behalf of the ACMU Lab group · **Priority:** Medium-High
 **Assigned:** you · **Host:** this machine
 
-> "Four things, all in `/srv/projects/acmu/`:
+> "Three things, all in `/srv/projects/acmu/`:
 >
 > - Buddhadev can't save anything into `shared/`, and can't open `notes.md` at all.
 >   He could last month.
-> - When I create a file in there, the others can't edit it. It keeps coming out
->   belonging to my own personal group instead of the project group.
 > - `sudo systemctl restart reportd` used to work for all of us. Now it's refused.
 > - Chandrima from the internal audit cell needs to *read* that folder for the
 >   annual review. He can't see anything."
@@ -26,14 +24,14 @@ group. Anyone who is not a member or the auditor should have no access at all.
 
 ## Five separate problems
 
-Arnab's four complaints overlap, but underneath them are **five independent
+Arnab's three complaints overlap, but underneath them are **five independent
 faults**, each with its own cause and its own fix. Fixing one does nothing for
 the others, and each is marked on its own. Tackle them in any order.
 
 | | What is wrong | Marks |
 |---|---|---|
 | **(a)** | Buddhadev is no longer in the `acmu` group | 3 |
-| **(b)** | The shared folder does not let the group write, and new files get the wrong group | 8 |
+| **(b)** | The shared folder does not let the group write | 7 |
 | **(c)** | `notes.md` has become one person's private file | 2 |
 | **(d)** | The group's `sudo` right restarts the wrong service | 4 |
 | **(e)** | The auditor has lost his read access | 1 |
@@ -74,12 +72,11 @@ id -nG buddhadev | grep -qw acmu && echo "buddhadev is a member"
 
 ---
 
-## (b) The shared folder: group write, and which group new files get
+## (b) The shared folder does not let the group write
 
-**Problem.** Members cannot create files in the folder. And once they can, the
-new files come out belonging to the creator's *personal* group instead of
-`acmu`, so nobody else can edit them. Both are about the **permission bits on
-the two directories**, `/srv/projects/acmu` and `shared/`.
+**Problem.** Members of `acmu` cannot create files in the folder at all. This
+is about the **permission bits on the two directories**,
+`/srv/projects/acmu` and `shared/`.
 
 **Reproduce.** Arnab is still a member, so test as her:
 ```bash
@@ -87,19 +84,16 @@ sudo -u arnab touch /srv/projects/acmu/shared/t1     # Permission denied
 stat -c '%a %U:%G %n' /srv/projects/acmu /srv/projects/acmu/shared
 ```
 
-**Fix.** Both directories must let the `acmu` group read and write, give
-everyone else no access, and make new files inside them belong to `acmu`
-automatically. A directory can carry more than the nine permission bits you see
-first.
+**Fix.** Both directories must let the `acmu` group read, write and enter them,
+and give everyone else no write access. Remember that a directory needs its
+execute bit before anyone can go into it at all.
 
 **Check.**
 ```bash
 sudo -u arnab touch /srv/projects/acmu/shared/t1 && echo "write OK"
-stat -c '%U:%G' /srv/projects/acmu/shared/t1         # group must be: acmu
 sudo rm -f /srv/projects/acmu/shared/t1
+stat -c '%a %U:%G %n' /srv/projects/acmu /srv/projects/acmu/shared
 ```
-The `stat` line is the one people miss. If the group comes out as `arnab`,
-this part is not fixed yet.
 
 ---
 

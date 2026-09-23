@@ -105,7 +105,7 @@ ls /srv/data/current                     # five CSVs, untouched
 
 | # | Fault | Symptom |
 |---|---|---|
-| 1 | `chmod 0750` on the tree — drops **both** setgid and group write | members cannot write; new files get the creator's own group |
+| 1 | `chmod 0750` on the tree — the group loses write | members cannot create files in the shared area |
 | 2 | `buddhadev` removed from the `acmu` group | one member locked out entirely |
 | 3 | `notes.md` → `arnab:arnab 0600` | shared file became private |
 | 4 | sudoers drop-in restarts **nginx** instead of **reportd** | valid syntax, wrong effect — `visudo -c` is clean |
@@ -121,11 +121,6 @@ sudo cat /etc/sudoers.d/acmu
 ```
 
 `0750` is the giveaway for fault 1 — a shared group directory should be `2770`.
-The leading `2` is the **setgid** bit: on a directory it makes new files inherit
-the directory's group instead of the creator's primary group. That is exactly
-Arnab's second complaint, and it is the single best discriminator in the paper —
-most candidates fix `g+w` and stop.
-
 ### The fix
 
 ```bash
@@ -160,10 +155,10 @@ sudo -u chandrima touch /srv/projects/acmu/shared/t2       # must FAIL
 
 | Check | Marks |
 |---|---|
-| `s3.dirmode` — setgid + group write, not world-writable | 3 |
+| `s3.dirmode` — group write, not world-writable | 3 |
 | `s3.dirgroup` — group is `acmu` | 1 |
 | `s3.member` — `buddhadev` back in the group | 2 |
-| `s3.groupwrite` — a member (arnab) creates a file **and it inherits group `acmu`** | 4 |
+| `s3.groupwrite` — a group member can create a file in `shared/` | 3 |
 | `s3.notes` — `notes.md` is group `acmu`, group read-write | 2 |
 | `s3.sudo` — sudoers points at the right unit | 2 |
 | `s3.sudosyn` — drop-in still parses under `visudo -c` | 1 |
@@ -257,7 +252,7 @@ ls -l ~/.ssh/id_acmu                    # -rw-------
 | Ticket | Raw | The one fault that separates candidates |
 |---|---|---|
 | #4419 disk | 14 | the unlinked-but-open file (`df` ≠ `du`) |
-| #4423 permissions | 16 | the **setgid** bit |
+| #4423 permissions | 16 | testing as the affected user, not as root |
 | #4451 ssh login | 10 | reading `ssh -v` — two faults, one error message |
 | **Total** | **40** | counts directly, no scaling |
 
