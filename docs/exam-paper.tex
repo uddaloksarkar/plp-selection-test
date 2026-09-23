@@ -150,8 +150,10 @@ getfacl /srv/projects/acmu/shared
 
 Underneath the two complaints are \textbf{three independent faults}, each with
 its own cause and fix, each marked on its own. Take them in any order.
-\textbf{Test as the users named, not as root.} Root can do everything, so a
-check run as root proves nothing.
+\textbf{Making the fixes will need root} (\texttt{sudo}) --- changing group
+membership, permissions and access rules all do. \textbf{But test as the users
+named, not as root:} root can do everything, so a check run as root proves
+nothing.
 
 %------------------------------------------------------------------ Q2(a)
 \hd{(a)\enspace Buddhadev is no longer in the \texttt{acmu} group \hfill [5 marks]}

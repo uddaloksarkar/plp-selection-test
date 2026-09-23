@@ -29,8 +29,9 @@ getfacl /srv/projects/acmu/shared
 Underneath the two complaints are **three independent faults**, each with its
 own cause and fix, each marked on its own. Take them in any order.
 
-**Test as the users named, not as root.** Root can do everything, so a check
-run as root proves nothing.
+**Making the fixes will need root** (`sudo`) — changing group membership,
+permissions and access rules all do. **But test as the users named, not as
+root:** root can do everything, so a check run as root proves nothing.
 
 | | What is wrong | Marks |
 |---|---|---|
