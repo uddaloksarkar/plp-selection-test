@@ -46,7 +46,7 @@ if [ -f "$PAPER" ]; then
   if command -v pdflatex >/dev/null 2>&1; then
     ( cd "$OUT" && pdflatex -interaction=batchmode -halt-on-error ALL-TICKETS.tex >/dev/null 2>&1 \
         && pdflatex -interaction=batchmode -halt-on-error ALL-TICKETS.tex >/dev/null 2>&1 )
-    rm -f "$OUT"/ALL-TICKETS.{aux,log,out,toc}
+    rm -f "$OUT"/ALL-TICKETS.{aux,log,out,toc,fls,fdb_latexmk,synctex.gz,nav,snm,vrb,bbl,blg}
     [ -f "$OUT/ALL-TICKETS.pdf" ] || echo "note: pdflatex did not produce a PDF" >&2
   else
     echo "note: pdflatex not installed - ALL-TICKETS.tex not compiled" >&2
