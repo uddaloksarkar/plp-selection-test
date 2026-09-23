@@ -28,11 +28,5 @@ setfacl -R  -m u:chandrima:rX /srv/projects/acmu
 setfacl -d -m u:chandrima:rX /srv/projects/acmu
 setfacl -d -m u:chandrima:rX /srv/projects/acmu/shared
 
-# delegated restart right for the group
-cat > /etc/sudoers.d/acmu <<'SUDO'
-# ACMU Lab: members may restart the reporting daemon themselves.
-%acmu ALL=(root) NOPASSWD: /usr/bin/systemctl restart reportd
-SUDO
-chmod 0440 /etc/sudoers.d/acmu
-visudo -cf /etc/sudoers.d/acmu
+rm -f /etc/sudoers.d/acmu          # no delegated sudo in this scenario
 echo "s3 baseline ready"

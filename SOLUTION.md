@@ -108,7 +108,6 @@ ls /srv/data/current                     # five CSVs, untouched
 | 1 | `chmod 0750` on the tree — the group loses write | members cannot create files in the shared area |
 | 2 | `buddhadev` removed from the `acmu` group | one member locked out entirely |
 | 3 | `notes.md` → `arnab:arnab 0600` | shared file became private |
-| 4 | sudoers drop-in restarts **nginx** instead of **reportd** | valid syntax, wrong effect — `visudo -c` is clean |
 | 5 | ACLs wiped with `setfacl -R -b` | auditor has no access |
 
 ### Diagnosis
@@ -117,7 +116,6 @@ ls /srv/data/current                     # five CSVs, untouched
 stat -c '%a %U:%G %n' /srv/projects/acmu /srv/projects/acmu/shared/notes.md
 id buddhadev
 getfacl /srv/projects/acmu
-sudo cat /etc/sudoers.d/acmu
 ```
 
 `0750` is the giveaway for fault 1 — a shared group directory should be `2770`.
@@ -129,8 +127,6 @@ sudo gpasswd -a buddhadev acmu
 sudo chown root:acmu /srv/projects/acmu/shared/notes.md
 sudo chmod 0660 /srv/projects/acmu/shared/notes.md
 
-sudo visudo -f /etc/sudoers.d/acmu
-#   %acmu ALL=(root) NOPASSWD: /usr/bin/systemctl restart reportd
 
 sudo setfacl -R  -m u:chandrima:rX /srv/projects/acmu
 sudo setfacl -d  -m u:chandrima:rX /srv/projects/acmu
@@ -146,7 +142,6 @@ readable by the auditor and the access silently rots.
 sudo -u buddhadev touch /srv/projects/acmu/shared/t1
 stat -c '%U:%G' /srv/projects/acmu/shared/t1     # must be *:acmu
 sudo -u buddhadev cat /srv/projects/acmu/shared/notes.md
-sudo -u arnab sudo -n systemctl restart reportd
 sudo -u chandrima cat /srv/projects/acmu/shared/notes.md   # works
 sudo -u chandrima touch /srv/projects/acmu/shared/t2       # must FAIL
 ```
@@ -159,10 +154,8 @@ sudo -u chandrima touch /srv/projects/acmu/shared/t2       # must FAIL
 | `s3.dirgroup` — group is `acmu` | 1 |
 | `s3.member` — `buddhadev` back in the group | 2 |
 | `s3.groupwrite` — a group member can create a file in `shared/` | 3 |
-| `s3.notes` — `notes.md` is group `acmu`, group read-write | 2 |
-| `s3.sudo` — sudoers points at the right unit | 2 |
-| `s3.sudosyn` — drop-in still parses under `visudo -c` | 1 |
-| `s3.aclread` — auditor can read | 1 |
+| `s3.notes` — `notes.md` is group `acmu`, group read-write | 3 |
+| `s3.aclread` — auditor can read | 2 |
 | `s3.penacl` — auditor can **write** (over-granted) | −4 |
 | `s3.pengrp` — auditor added to the group (explicitly forbidden) | −4 |
 | `s3.pen777` — anything world-writable under `/srv/projects` | −5 |
@@ -173,7 +166,6 @@ sudo -u chandrima touch /srv/projects/acmu/shared/t2       # must FAIL
 - "Why an ACL for the auditor rather than the group? What is the default ACL for?"
 - "You added buddhadev back and his shell still says denied. Why?" (group changes
   need a new login session)
-- "Why `visudo -f` and not an editor?" (a broken sudoers file locks out sudo
   for everyone)
 
 ---

@@ -34,10 +34,7 @@
 \begin{framed}
 \begin{center}\textbf{EXAMINATION INSTRUCTIONS}\end{center}
 \begin{enumerate}[leftmargin=1.5em,itemsep=0.35em,topsep=0.3em]
-  \item You have root on a virtual machine. It is a disposable clone: you
-        cannot damage anything that matters, and it is connected to no real
-        network. Log in with
-        \verb|ssh candidate@192.168.56.10|.
+  \item You have root on a virtual machine. It is connected to no real network. Log in with \verb|ssh candidate@192.168.56.10|.
   \item Each question has four parts --- \emph{the problem}, \emph{how to
         reproduce it}, \emph{what to fix}, and \emph{how to check your work}.
         Run the checks yourself; you should not have to guess whether you are
@@ -66,7 +63,7 @@ recorded. Questions may be attempted in any order.
 \item \textbf{Disk full on the lab file server.} \hfill [14 marks]
 
 \emph{Reported by Debarshi Roy, research scholar:} ``I cannot copy anything into
-\texttt{/srv/data} --- it says the disk is full, and nothing I can see in there
+\texttt{/srv/data}, it says the disk is full, and nothing I can see in there
 accounts for that much space. Submitting a job into \texttt{/srv/spool}
 \emph{also} says the disk is full, but \texttt{df -h} shows that one has plenty
 of space left. That part makes no sense to me.''
@@ -141,7 +138,7 @@ while \texttt{df -h} showed free space.
 touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
 \end{shell}
 
-\hd{Constraints --- these apply to both parts, and are marked}
+\hd{Constraints}
 \begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
   \item Nothing under \texttt{/srv/data/current} may be deleted or changed.
         It is live survey data with no second copy on this machine.
@@ -158,7 +155,6 @@ touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
 \emph{Reported for the ACMU Lab group:} ``Buddhadev cannot save anything
 into \texttt{shared/}, and cannot open \texttt{notes.md} at all. When I create
 a file there, the others cannot edit it --- it comes out belonging to my own
-\texttt{sudo systemctl restart reportd} used to work for all of us; now it is
 refused. And Chandrima from the internal audit cell needs to \emph{read} that
 folder for the annual review. He cannot see anything.''
 
@@ -179,7 +175,7 @@ To see the current state:
 \begin{shell}
 cd /srv/projects/acmu
 stat -c '%a %U:%G %n' . shared shared/notes.md
-id buddhadev; getfacl shared; sudo cat /etc/sudoers.d/acmu
+id buddhadev; getfacl /srv/projects/acmu/shared
 \end{shell}
 \end{framed}
 
@@ -190,7 +186,7 @@ named, not as root --- root can do everything, so a check run as root proves
 nothing.
 
 %------------------------------------------------------------------ Q2(a)
-\hd{(a)\enspace Buddhadev is no longer in the \texttt{acmu} group \hfill [3 marks]}
+\hd{(a)\enspace Buddhadev is no longer in the \texttt{acmu} group \hfill [4 marks]}
 \textit{Reproduce:} \verb|id buddhadev| --- \texttt{acmu} is missing.
 \textit{Fix:} put him back, without changing any of his other groups.
 \begin{shell}
@@ -214,7 +210,7 @@ sudo -u arnab touch /srv/projects/acmu/shared/t1 && echo "write OK"
 sudo rm -f /srv/projects/acmu/shared/t1
 \end{shell}
 
-\hd{(c)\enspace \texttt{notes.md} has become private \hfill [2 marks]}
+\hd{(c)\enspace \texttt{notes.md} has become private \hfill [3 marks]}
 \texttt{shared/notes.md} is the group's working file, but now belongs to one
 person and only she can read it. \textit{Fix:} group \texttt{acmu},
 readable and writable by the group, no access for anyone else.
@@ -223,19 +219,7 @@ stat -c '%a %G' /srv/projects/acmu/shared/notes.md    # 660 acmu
 \end{shell}
 
 %------------------------------------------------------------------ Q2(d)
-\hd{(d)\enspace The group's \texttt{sudo} right is broken \hfill [3 marks]}
-Members of \texttt{acmu} --- and only them --- should be able to run
-\texttt{sudo -n systemctl restart reportd} without a password. The rule is in
-\texttt{/etc/sudoers.d/acmu} and no longer does what it was meant to.
-\textit{Fix:} correct the rule, editing the file only with
-\texttt{sudo visudo -f /etc/sudoers.d/acmu} --- never a plain editor.
-\begin{shell}
-sudo -u arnab sudo -n systemctl restart reportd && echo "sudo OK"
-sudo visudo -cf /etc/sudoers.d/acmu                   # parsed OK
-\end{shell}
-
-%------------------------------------------------------------------ Q2(e)
-\hd{(e)\enspace The auditor cannot read the folder \hfill [1 mark]}
+\hd{(d)\enspace The auditor cannot read the folder \hfill [2 marks]}
 Chandrima's access came from per-user entries on the files themselves, and those
 have been wiped. \textit{Fix:} give him read-only access to everything under
 \texttt{/srv/projects/acmu/}, including files created there in future ---
@@ -310,20 +294,10 @@ ls -l ~/.ssh/id_acmu                    # -rw------- (0600)
 \texttt{BatchMode=yes} forbids any password prompt, so if this prints
 \texttt{acmusrv} the key really is doing the work.
 
-\hd{Constraints --- these are marked}
-\begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
-  \item \textbf{Do not give \texttt{acmusrv} a password}, and do not enable
-        password authentication. The account is key-only by policy; a password
-        makes the symptom go away without fixing anything.
-  \item No \texttt{chmod 777} on anything under \texttt{.ssh}.
-\end{itemize}
-
 \emph{Hint.} \texttt{ssh -v} is the whole diagnosis: it prints which key files
 it considered, which it offered, and what the server said. \emph{Permission
 denied} means something answered and said no --- quite different from
-\emph{Connection refused}, which means nothing was listening at all. The key
-pair itself is fine; nothing needs regenerating and nothing on the server side
-needs changing.
+\emph{Connection refused}, which means nothing was listening at all. 
 
 \end{enumerate}
 \end{document}

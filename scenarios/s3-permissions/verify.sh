@@ -25,23 +25,19 @@ notes_shared() {                # group acmu, group rw (with an ACL, %a shows th
   local m; m=$(stat -c %a "$SHARED/notes.md")
   [ "$(stat -c %G "$SHARED/notes.md")" = acmu ] && (( (${m: -2:1} & 6) == 6 ))
 }
-arnab_sudo_ok()      { runuser -u arnab -- sudo -n /usr/bin/systemctl restart reportd; }
 chandrima_reads()      { runuser -u chandrima -- cat "$SHARED/notes.md"; }
 chandrima_writes()     { local f="$SHARED/.aud.$$"; runuser -u chandrima -- bash -c ": > '$f'" 2>/dev/null && { rm -f "$f"; return 0; }; return 1; }
 chandrima_in_group()   { id -nG chandrima | tr ' ' '\n' | grep -qx acmu; }
 world_writable()     {          # symlinks are always 0777 - only real files/dirs count
   [ -n "$(find /srv/projects \( -type f -o -type d \) -perm -0002 -print -quit 2>/dev/null)" ]
 }
-sudoers_valid()      { visudo -cf /etc/sudoers.d/acmu; }
 
 check 3 s3.dirmode   "shared dir is group-writable, not world-writable" dir_mode_ok
 check 1 s3.dirgroup  "shared dir group is acmu"             dir_group_ok
-check 3 s3.member    "buddhadev is back in the acmu group"     buddhadev_member
+check 4 s3.member    "buddhadev is back in the acmu group"     buddhadev_member
 check 3 s3.groupwrite "a group member can create files in shared/" member_can_write
-check 2 s3.notes     "notes.md is group acmu, group read-write" notes_shared
-check 2 s3.sudo      "arnab can 'sudo -n systemctl restart reportd'" arnab_sudo_ok
-check 1 s3.sudosyn   "sudoers drop-in still parses"            sudoers_valid
-check 1 s3.aclread   "auditor chandrima can read notes.md"       chandrima_reads
+check 3 s3.notes     "notes.md is group acmu, group read-write" notes_shared
+check 2 s3.aclread   "auditor chandrima can read notes.md"       chandrima_reads
 
 penalty 4 s3.penacl  "auditor can WRITE (over-granted)"        chandrima_writes
 penalty 4 s3.pengrp  "auditor was added to acmu instead of ACL" chandrima_in_group

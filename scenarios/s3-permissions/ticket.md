@@ -3,11 +3,10 @@
 **Raised by:** Arnab Basu, on behalf of the ACMU Lab group · **Priority:** Medium-High
 **Assigned:** you · **Host:** this machine
 
-> "Three things, all in `/srv/projects/acmu/`:
+> "Two things, all in `/srv/projects/acmu/`:
 >
 > - Buddhadev can't save anything into `shared/`, and can't open `notes.md` at all.
 >   He could last month.
-> - `sudo systemctl restart reportd` used to work for all of us. Now it's refused.
 > - Chandrima from the internal audit cell needs to *read* that folder for the
 >   annual review. He can't see anything."
 
@@ -22,19 +21,18 @@
 `/srv/projects/acmu/` (and `shared/` inside it) belongs to the `acmu`
 group. Anyone who is not a member or the auditor should have no access at all.
 
-## Five separate problems
+## Four separate problems
 
-Arnab's three complaints overlap, but underneath them are **five independent
+Arnab's three complaints overlap, but underneath them are **four independent
 faults**, each with its own cause and its own fix. Fixing one does nothing for
 the others, and each is marked on its own. Tackle them in any order.
 
 | | What is wrong | Marks |
 |---|---|---|
-| **(a)** | Buddhadev is no longer in the `acmu` group | 3 |
+| **(a)** | Buddhadev is no longer in the `acmu` group | 4 |
 | **(b)** | The shared folder does not let the group write | 7 |
-| **(c)** | `notes.md` has become one person's private file | 2 |
-| **(d)** | The group's `sudo` right restarts the wrong service | 3 |
-| **(e)** | The auditor has lost his read access | 1 |
+| **(c)** | `notes.md` has become one person's private file | 3 |
+| **(d)** | The auditor has lost her read access | 2 |
 
 Buddhadev's complaint needs (a), (b) and (c) all fixed before it goes away
 completely. That is why the checks below test each part on its own; the final
@@ -47,7 +45,6 @@ stat -c '%a %U:%G %n' /srv/projects/acmu /srv/projects/acmu/shared \
                       /srv/projects/acmu/shared/notes.md
 id buddhadev
 getfacl /srv/projects/acmu/shared
-sudo cat /etc/sudoers.d/acmu
 ```
 
 ---
@@ -117,31 +114,7 @@ stat -c '%a %G' /srv/projects/acmu/shared/notes.md      # 660 acmu
 
 ---
 
-## (d) The group's `sudo` right is broken
-
-**Problem.** Members of `acmu` are meant to be able to restart the reporting
-service `reportd` themselves, without a password. That right is defined in
-`/etc/sudoers.d/acmu`, and it no longer does what it was meant to.
-
-**Reproduce.**
-```bash
-sudo -u arnab sudo -n systemctl restart reportd            # refused
-sudo cat /etc/sudoers.d/acmu
-```
-
-**Fix.** Members of `acmu` — and only them — can run
-`sudo -n systemctl restart reportd` without being asked for a password.
-Edit the file with `sudo visudo -f /etc/sudoers.d/acmu`, not a plain editor.
-
-**Check.**
-```bash
-sudo -u arnab sudo -n systemctl restart reportd && echo "sudo OK"
-sudo visudo -cf /etc/sudoers.d/acmu                     # parsed OK
-```
-
----
-
-## (e) The auditor cannot read the folder
+## (d) The auditor cannot read the folder
 
 **Problem.** Chandrima must be able to read the whole tree for the audit, but is
 not a member of `acmu` and must not become one. His access used to come from
@@ -166,7 +139,7 @@ The second line must print nothing but an error.
 
 ---
 
-## When all five are done
+## When all four are done
 
 Buddhadev's original complaint should be gone:
 
@@ -192,6 +165,5 @@ sudo -u buddhadev cat /srv/projects/acmu/shared/notes.md >/dev/null && echo "bud
 - Test as the affected users, not as root: root can read and write everything,
   so a check run as root proves nothing.
 - Worth knowing about: `stat`, `chmod`, `chown`, `id`, `groups`, `gpasswd`,
-  `getfacl`, `setfacl`, `visudo`. Not all of them are relevant.
 - Record symptom, cause, change and verification in `~/FIXLOG.md`, one entry
   for each part.
