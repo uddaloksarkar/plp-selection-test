@@ -1,19 +1,13 @@
-> ## PLP Selection Examination — Part B (practical)
-> **Indian Statistical Institute**
+> ## PLP Selection Examination — Practical
+> **Indian Statistical Institute** · 2026–2027
 >
-> **Three tickets. 90 minutes. Do them in any order.**
+> **Total: 14 + 16 + 10 = 40 marks · Duration: 90 minutes**
 >
-> Each ticket has four parts: what the problem is, how to reproduce it, what to
-> fix, and **how to check you have fixed it**. Run those checks yourself — you
-> should not have to guess whether you are done.
+> 1. You have root on a virtual machine. It is connected to no real network.
+> 2. Each question has four parts: *the problem*, *how to reproduce it*,
+>    *what to fix*, and *how to check your work* — so that you do not have to
+>    guess whether you are finished.
+> 3. Partial credit is given if you can explain the problem and the reason
+>    behind it, even if you cannot fix it.
 >
-> You are not expected to know all of this in advance. Partial credit is real:
-> a fault you diagnose correctly and explain, but cannot finish, is worth more
-> than one you paper over. `man`, `--help` and the system logs are all available.
->
-> The *Constraints* section of every ticket is marked. Breaking a constraint
-> loses marks even when the symptom goes away.
->
-> Keep `~/FIXLOG.md` up to date as you go — symptom, cause, what you changed,
-> how you verified it. It is marked, and there is a short discussion of your
-> work afterwards.
+> Record symptom, cause, change and verification in `~/FIXLOG.md` as you go.

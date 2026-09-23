@@ -1,11 +1,10 @@
-# TICKET #4423 — Shared project folder unusable
+# Q2 — Shared project folder unusable · 16 marks
 
-**Raised by:** Arnab Basu, on behalf of the ACMU Lab group · **Priority:** Medium-High
-**Assigned:** you · **Host:** this machine
+*Reported for the ACMU Lab group:*
 
-> "Buddhadev cannot save anything into `shared/`, and cannot open `notes.md` at
-> all — he could last month. And Chandrima from the internal audit cell needs
-> to *read* that folder for the annual review, and cannot see anything at all."
+> "Buddhadev cannot save anything into `shared/`, which he could last month.
+> And Chandrima from the internal audit cell needs to *read* that folder for
+> the annual review, and cannot see anything at all."
 
 ## Background: who is who
 
@@ -27,8 +26,6 @@ id buddhadev
 getfacl /srv/projects/acmu/shared
 ```
 
-## Three separate faults
-
 Underneath the two complaints are **three independent faults**, each with its
 own cause and fix, each marked on its own. Take them in any order.
 
@@ -39,41 +36,32 @@ run as root proves nothing.
 |---|---|---|
 | **(a)** | Buddhadev is no longer in the `acmu` group | 5 |
 | **(b)** | The shared folder does not let the group write | 8 |
-| **(c)** | The auditor has lost read access | 3 |
+| **(c)** | The auditor cannot read the folder | 3 |
 
 ---
 
-## (a) Buddhadev is no longer in the `acmu` group
+## (a) Buddhadev is no longer in the `acmu` group · 5 marks
 
-**Reproduce.**
-```bash
-id buddhadev                     # acmu is missing
-```
+**Reproduce.** Check `id buddhadev` — `acmu` is missing.
 
 **Fix.** Put him back, without disturbing his other groups.
 
-**Check.**
-```bash
-id -nG buddhadev | grep -qw acmu && echo "buddhadev is a member"
-```
+**Check.** Keep checking with `id buddhadev` until it shows `acmu` again.
 
 ---
 
-## (b) The shared folder does not let the group write
+## (b) The shared folder does not let the group write · 8 marks
 
-Members of `acmu` cannot create files in the folder at all. This is about the
-permission bits on the two directories, `/srv/projects/acmu` and `shared/`.
-Arnab is still a member, so test as arnab.
+Members of `acmu` cannot create files in the folder at all. Arnab is still a
+member, so test as arnab:
 
-**Reproduce.**
 ```bash
 sudo -u arnab touch /srv/projects/acmu/shared/t1     # Permission denied
 stat -c '%a %U:%G %n' /srv/projects/acmu /srv/projects/acmu/shared
 ```
 
 **Fix.** Both directories must let the `acmu` group read, write and enter them,
-and give everyone else no write access. Remember that a directory needs its
-execute bit before anyone can go into it at all.
+and give everyone else no write access.
 
 **Check.**
 ```bash
@@ -83,14 +71,11 @@ sudo rm -f /srv/projects/acmu/shared/t1
 
 ---
 
-## (c) The auditor cannot read the folder
-
-Chandrima's access came from per-user entries on the files themselves, and
-those have been wiped.
+## (c) The auditor cannot read the folder · 3 marks
 
 **Fix.** Grant read-only access to everything under `/srv/projects/acmu/`,
-including files created there in future, and do it **without** adding chandrima
-to the group.
+including files created there in future, and do it **without** adding
+chandrima to the group.
 
 **Check.**
 ```bash
@@ -109,15 +94,8 @@ sudo -u buddhadev touch /srv/projects/acmu/shared/t3        # must work
 sudo -u buddhadev cat /srv/projects/acmu/shared/notes.md    # must work
 ```
 
-## Constraints — these apply to every part, and are marked
+## Constraints
 
 - **Chandrima must not be put into the `acmu` group.** Audit policy forbids
   putting auditors into the groups they audit: read everything, write nothing.
 - No `chmod 777`, anywhere. This is a multi-user machine.
-- Do not change anyone's login shell, password or home directory.
-
-## Notes
-
-- Group membership changes do not affect a shell that is already open;
-  `sudo -u <user>` starts a fresh one.
-- Record symptom, cause, change and verification in `~/FIXLOG.md`.
