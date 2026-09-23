@@ -11,7 +11,7 @@ the marking is automatic, check by check.
 On a **Linux** machine (Ubuntu/Debian) with internet access for the first run:
 
 ```bash
-git clone git@github.com:uddaloksarkar/plp-selection-test.git && cd plp-selection-test
+git clone https://github.com/uddaloksarkar/plp-selection-test.git && cd plp-selection-test
 ./plp up
 ```
 
