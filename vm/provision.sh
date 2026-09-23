@@ -15,6 +15,14 @@ fi
 
 echo "### 1/5 packages"
 export DEBIAN_FRONTEND=noninteractive
+
+# Stop Ubuntu's automatic updates before touching apt. They hold the apt lock
+# on a fresh cloud image, and an openssh update restarts sshd and drops the
+# provisioning session. An exam VM must also behave identically for every
+# candidate, which automatic updates would quietly undermine.
+systemctl stop unattended-upgrades apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+systemctl disable --now unattended-upgrades apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+
 # cloud-init or unattended-upgrades may still hold the apt lock on a fresh boot
 for _i in $(seq 1 60); do
   pgrep -f 'apt-get|unattended-upgrade' >/dev/null 2>&1 || break

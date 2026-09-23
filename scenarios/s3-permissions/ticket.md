@@ -33,7 +33,7 @@ the others, and each is marked on its own. Tackle them in any order.
 | **(a)** | Buddhadev is no longer in the `acmu` group | 3 |
 | **(b)** | The shared folder does not let the group write | 7 |
 | **(c)** | `notes.md` has become one person's private file | 2 |
-| **(d)** | The group's `sudo` right restarts the wrong service | 4 |
+| **(d)** | The group's `sudo` right restarts the wrong service | 3 |
 | **(e)** | The auditor has lost his read access | 1 |
 
 Buddhadev's complaint needs (a), (b) and (c) all fixed before it goes away

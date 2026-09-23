@@ -41,8 +41,8 @@ each is marked on its own.
 
 | | Disk | What is wrong | Marks |
 |---|---|---|---|
-| **(a)** | `/srv/data` | genuinely full, and the visible files do not account for it | 12 |
-| **(b)** | `/srv/spool` | refuses new files, although `df -h` shows free space | 4 |
+| **(a)** | `/srv/data` | genuinely full, and the visible files do not account for it | 11 |
+| **(b)** | `/srv/spool` | refuses new files, although `df -h` shows free space | 3 |
 
 ---
 
