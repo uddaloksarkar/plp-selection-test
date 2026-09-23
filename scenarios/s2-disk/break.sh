@@ -41,6 +41,13 @@ if [ "$fill" -gt 0 ]; then
 fi
 
 # now let the collector take the remaining space and hold it open
+# The collector allocates its spool once per boot and records that in /run, so
+# that restarting it during the exam reclaims the space for good. Arming twice
+# in the same boot -- a retry after a failure, or provisioning a VM that was
+# already armed -- would otherwise find the marker present, skip the
+# allocation, and leave no leak at all. Clear it: this script IS the boot, as
+# far as the fault is concerned.
+rm -f /run/exam-metrics-collector.allocated
 systemctl start exam-metrics-collector
 # wait for the collector to finish claiming its spool
 for _i in $(seq 1 60); do

@@ -141,5 +141,8 @@ WantedBy=multi-user.target
 UNIT
 
 systemctl daemon-reload
-systemctl enable --now reportd exam-metrics-collector
+systemctl enable reportd exam-metrics-collector >/dev/null
+# restart, not 'enable --now': an already-running instance would otherwise keep
+# the previous run's script and environment
+systemctl restart reportd exam-metrics-collector
 echo "s2 baseline ready"
