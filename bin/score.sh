@@ -3,7 +3,7 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export EXAM_ROOT="${EXAM_ROOT:-$HERE}"
-ALL=(s1-website s2-disk s3-permissions s4-dns s5-python s6-vpn)
+ALL=(s1-website s2-disk s3-permissions s4-dns s5-python s6-vpn s7-tunnel)
 sel=("$@"); [ ${#sel[@]} -eq 0 ] && sel=("${ALL[@]}")
 [ "$(id -u)" -eq 0 ] || { echo "run as root" >&2; exit 2; }
 

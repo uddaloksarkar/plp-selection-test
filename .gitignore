@@ -2,3 +2,22 @@
 build/
 marks/
 plp.conf
+
+# LaTeX byproducts (the .tex source and the printable .pdf stay tracked)
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.nav
+*.snm
+*.vrb
+*.bbl
+*.blg
+*.run.xml
+*-blx.bib

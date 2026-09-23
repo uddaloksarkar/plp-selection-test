@@ -12,33 +12,32 @@ Candidate: ________________________  Date: __________  Panel: ______________
 | A4 | Hardware and the estate | 4 | |
 | | **Part A** | **30** | |
 
-## Part B — automated (45)
+## Part B — automated (40)
 
-Raw score from `bin/score.sh`, out of 50, scaled to 45 (`raw / 50 * 45`).
+The raw score from `bin/score.sh` counts directly — there is no scaling.
 
 | scenario | raw | max |
 |---|---|---|
-| s2-disk | | 16 |
-| s3-permissions | | 18 |
-| s4-dns | | 16 |
+| s2-disk | | 14 |
+| s3-permissions | | 16 |
+| s7-tunnel | | 10 |
 | penalties (negative) | | |
-| **raw total** | | **50** |
-| **scaled → /45** | | **45** |
+| **Part B** | | **40** |
 
 Penalties incurred (list them — discuss these in the panel even when the total
 looks healthy):
 
 _____________________________________________________________________
 
-## Part B — FIXLOG (10)
+## Part B — FIXLOG (15)
 
 | | max | given |
 |---|---|---|
-| Cause distinguished from symptom | 3 | |
+| Cause distinguished from symptom | 5 | |
 | Verification step recorded for each fix | 3 | |
 | Honest about what is unfinished / uncertain | 2 | |
-| Readable by the next person on shift | 2 | |
-| **FIXLOG** | **10** | |
+| Readable by the next person on shift | 5 | |
+| **FIXLOG** | **15** | |
 
 ## Part C — viva (15)
 

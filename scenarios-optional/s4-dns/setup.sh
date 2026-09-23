@@ -17,6 +17,10 @@ if systemctl list-unit-files 2>/dev/null | grep -q '^NetworkManager\.service'; t
   systemctl reload-or-restart NetworkManager 2>/dev/null || true
 fi
 
+# no-hosts: serve only the zone records. By default dnsmasq also serves /etc/hosts, read
+# once at start -- so fixing the resolver before removing the stale portal pin
+# left dnsmasq handing out the pin over DNS until it was restarted, coupling two
+# otherwise independent faults and letting hosts-file entries pass as DNS.
 cat > /etc/dnsmasq.d/isi-local.conf <<CONF
 # Campus resolver for the isi.local zone
 listen-address=127.0.0.1
@@ -25,10 +29,11 @@ no-resolv
 server=$UP
 domain-needed
 bogus-priv
+no-hosts
 log-queries
 
 address=/www.isi.local/127.0.0.1
-address=/statlab.isi.local/127.0.0.1
+address=/acmu.isi.local/127.0.0.1
 address=/portal.isi.local/127.0.0.1
 address=/git.isi.local/10.10.10.9
 address=/nas.isi.local/10.10.10.20

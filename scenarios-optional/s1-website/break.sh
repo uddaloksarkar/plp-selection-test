@@ -10,7 +10,7 @@ cat > /etc/nginx/sites-enabled/zz-legacy.conf <<'CONF'
 # added by intern during the migration - do not delete without asking (2025-11-04)
 server {
     listen 80 default_server;
-    server_name old-statlab.isi.local;
+    server_name old-acmu.isi.local;
     root /srv/www/legacy;
     index index.html;
 }
@@ -19,8 +19,8 @@ install -d -m 0755 /srv/www/legacy
 echo "legacy site" > /srv/www/legacy/index.html
 
 # (2) someone "secured" the docroot
-chown -R root:root /srv/www/statlab
-chmod 0700 /srv/www/statlab
+chown -R root:root /srv/www/acmu
+chmod 0700 /srv/www/acmu
 
 # (3) service left down and disabled after the failed restart
 systemctl stop nginx 2>/dev/null || true

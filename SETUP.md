@@ -148,8 +148,8 @@ Confirm every symptom:
 |---|---|---|
 | 1 | `df -h /srv/data` and `df -i /srv/spool` | 100% used / 100% IUse |
 | 1 | `touch /srv/spool/incoming/t` | No space left on device |
-| 2 | `sudo -u bikram touch /srv/projects/statlab/shared/x` | Permission denied |
-| 2 | `sudo -u anita sudo -n systemctl restart reportd` | refused |
+| 2 | `sudo -u buddhadev touch /srv/projects/acmu/shared/x` | Permission denied |
+| 2 | `sudo -u arnab sudo -n systemctl restart reportd` | refused |
 | 3 | `getent hosts www.isi.local` | nothing, after a pause |
 | 3 | `getent hosts portal.isi.local` | answers `192.0.2.77` — wrong |
 
@@ -360,6 +360,6 @@ bash bin/make-candidate-bundle.sh        # -> build/candidate-bundle/
 
 # on the VM itself
 sudo bash /opt/plp-exam/vm/healthcheck.sh          # "Baseline clean."
-sudo bash /opt/plp-exam/bin/exam-ctl.sh arm s4-dns
+sudo bash /opt/plp-exam/bin/exam-ctl.sh arm s7-tunnel
 sudo bash /opt/plp-exam/bin/score.sh s3-permissions
 ```

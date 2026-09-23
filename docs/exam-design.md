@@ -71,7 +71,7 @@ either way; it is the single most informative fifteen minutes of the day.
 |---|---|---|---|
 | A | Written / oral, no devices | 45 min | 30 |
 | — | Break, VM handout | 15 min | — |
-| B | Hands-on scenarios on a VM | 90 min | 45 (automated) + 10 (FIXLOG) |
+| B | Hands-on scenarios on a VM | 90 min | 40 (automated) + 15 (FIXLOG) |
 | C | Viva on their own Part B work | 15 min per candidate | 15 |
 | | **Total** | | **100** |
 
@@ -90,8 +90,8 @@ wrong* and *what would you run next*. Suggested six, two marks each:
    *(inode exhaustion — expect `df -i`)*
 2. `systemctl status nginx` with `Job for nginx.service failed ... see journalctl`
    plus the journal line `duplicate default server for 0.0.0.0:80`.
-3. `ls -l` showing `-rw-------  1 anita anita  notes.md` and a user in group
-   `statlab` getting Permission denied.
+3. `ls -l` showing `-rw-------  1 arnab arnab  notes.md` and a user in group
+   `acmu` getting Permission denied.
 4. A `ping` that resolves instantly to the wrong address, with `/etc/hosts`
    printed beside it.
 5. A Python traceback ending `ImportError` where `numpy.__file__` points
@@ -109,16 +109,16 @@ this is wrong, what is risky, and what would you do instead?
 
 Example to hand out:
 
-> **Ticket:** Users in the `statlab` group can't write to the shared project
+> **Ticket:** Users in the `acmu` group can't write to the shared project
 > folder.
-> **Suggested fix:** "Run `sudo chmod -R 777 /srv/projects/statlab`. This gives
+> **Suggested fix:** "Run `sudo chmod -R 777 /srv/projects/acmu`. This gives
 > everyone full access and will immediately resolve the permission errors. You
 > can also add the users to the `sudo` group so they don't hit this again."
 
 Full marks require naming: world-writable exposes the data to every account on
 the machine; `-R` also strips the setgid bit so the *next* file will break
 again; `sudo` group membership is a privilege escalation unrelated to the
-problem; and the correct fix is group ownership + `2775` + group membership.
+problem; and the correct fix is group ownership + `2770` + group membership.
 
 Write two of these. The second one should be *subtly* wrong rather than
 obviously wrong — e.g. an answer that fixes the symptom correctly but silently
@@ -153,17 +153,17 @@ The role covers hardware; make it concrete and local, not trivia.
 
 | # | Scenario | Domain | Raw |
 |---|---|---|---|
-| 1 | Disk space | Storage | 16 |
-| 2 | User permissions | Linux | 18 |
-| 3 | Network / DNS | Networking | 16 |
+| 1 | Disk space | Storage | 14 |
+| 2 | User permissions | Linux | 16 |
+| 3 | Reverse SSH tunnel | Networking / SSH | 10 |
 
 Three scenarios on one VM per candidate, 90 minutes, all three armed at once,
-candidate picks the order. Automated scoring out of 50, scaled to 45 marks.
+candidate picks the order. Automated scoring out of 40, counted directly.
 
 The paper was cut from six scenarios to three deliberately. Six rewarded
 skimming; three give a candidate room to diagnose properly, and diagnosis is
 what the post actually needs. The three retained cover the fault families this
-role meets weekly — storage, permissions, name resolution — and each still
+role meets weekly — storage, permissions, remote access — and each still
 carries two to four independent faults in different layers. The other three
 (web service, Python environment, VPN/firewall) are complete and kept in
 `scenarios-optional/` if a future panel wants them.
@@ -172,7 +172,7 @@ Every ticket now ends with **"How to check you have fixed it"** — the exact
 commands, with the output to expect. Candidates should not have to guess whether
 they are done, and it makes partial credit legible to them as they work.
 
-### The FIXLOG (10 marks)
+### The FIXLOG (15 marks)
 
 Every candidate writes `~/FIXLOG.md` as they go. One entry per fix:
 
@@ -181,7 +181,7 @@ Every candidate writes `~/FIXLOG.md` as they go. One entry per fix:
 Symptom:   nginx dead, `nginx -t` reports duplicate default server
 Cause:     /etc/nginx/sites-enabled/zz-legacy.conf, second listen 80 default_server
 Change:    removed the symlink (kept the file), restored docroot to www-data 0755
-Verified:  curl -H 'Host: statlab.isi.local' localhost -> page returns; systemctl is-enabled nginx
+Verified:  curl -H 'Host: acmu.isi.local' localhost -> page returns; systemctl is-enabled nginx
 Left open: the legacy file says "do not delete" — needs confirming with its author
 ```
 

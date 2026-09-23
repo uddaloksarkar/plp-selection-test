@@ -82,6 +82,13 @@ touch /etc/cloud/cloud-init.disabled
 if [ ! -d "$HERE/scenarios/s1-website" ]; then
   systemctl disable --now nginx >/dev/null 2>&1 || true
 fi
+# Likewise dnsmasq, used only by the optional DNS scenario. Left enabled, it
+# fails against systemd-resolved on port 53 and sits in 'systemctl --failed' --
+# a red herring for a candidate working on the networking ticket.
+if [ ! -d "$HERE/scenarios/s4-dns" ]; then
+  systemctl disable --now dnsmasq >/dev/null 2>&1 || true
+  systemctl reset-failed dnsmasq >/dev/null 2>&1 || true
+fi
 
 echo "### 2/5 accounts"
 id candidate >/dev/null 2>&1 || adduser --disabled-password --gecos "PLP Candidate" candidate

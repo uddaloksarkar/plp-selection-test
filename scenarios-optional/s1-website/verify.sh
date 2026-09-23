@@ -2,9 +2,9 @@
 SCENARIO=s1-website
 source "${EXAM_ROOT:-/opt/plp-exam}/lib/checks.sh"
 
-page_ok() { curl -sS --max-time 5 -H 'Host: statlab.isi.local' http://127.0.0.1/ | grep -q 'STATLAB-DEPT-PAGE'; }
-sub_ok()  { curl -sS --max-time 5 -o /dev/null -w '%{http_code}' -H 'Host: statlab.isi.local' http://127.0.0.1/reports/ | grep -q '^200$'; }
-docroot_sane() { local m; m=$(stat -c '%a' /srv/www/statlab); [ "$m" != 777 ] && [ "$m" != 776 ]; }
+page_ok() { curl -sS --max-time 5 -H 'Host: acmu.isi.local' http://127.0.0.1/ | grep -q 'ACMU-DEPT-PAGE'; }
+sub_ok()  { curl -sS --max-time 5 -o /dev/null -w '%{http_code}' -H 'Host: acmu.isi.local' http://127.0.0.1/reports/ | grep -q '^200$'; }
+docroot_sane() { local m; m=$(stat -c '%a' /srv/www/acmu); [ "$m" != 777 ] && [ "$m" != 776 ]; }
 world_writable() {              # symlinks are always 0777 - only real files/dirs count
   [ -n "$(find /srv/www \( -type f -o -type d \) -perm -0002 -print -quit 2>/dev/null)" ]
 }

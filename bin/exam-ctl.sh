@@ -11,7 +11,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export EXAM_ROOT="${EXAM_ROOT:-$HERE}"
 source "$HERE/lib/checks.sh"
 
-ALL=(s2-disk s3-permissions s4-dns)
+ALL=(s2-disk s3-permissions s7-tunnel)
 cmd="${1:-list}"; shift || true
 sel=("$@"); [ ${#sel[@]} -eq 0 ] && sel=("${ALL[@]}")
 

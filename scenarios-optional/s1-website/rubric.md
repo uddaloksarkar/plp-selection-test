@@ -12,7 +12,7 @@
 
 ## Faults injected
 1. `/etc/nginx/sites-enabled/zz-legacy.conf` declares a second `listen 80 default_server` → `nginx -t` fails with *a duplicate default server*.
-2. `/srv/www/statlab` chowned to `root:root`, mode `0700` → 403 once nginx starts.
+2. `/srv/www/acmu` chowned to `root:root`, mode `0700` → 403 once nginx starts.
 3. `nginx` stopped **and** disabled.
 
 ## What separates a strong candidate

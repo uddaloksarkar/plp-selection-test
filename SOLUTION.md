@@ -6,13 +6,13 @@
 > accident — but it is in the repository that gets copied to the VM during
 > provisioning, and `seal.sh` is what removes it again before the exam.
 
-Three tickets, 50 raw marks, scaled to 45. Each carries several independent
+Three tickets, 40 marks, counted directly. Each carries several independent
 faults in different layers, and each has at least one shortcut that clears the
 symptom while losing marks.
 
 ---
 
-## Ticket #4419 — Disk full on the lab file server (16 marks)
+## Ticket #4419 — Disk full on the lab file server (14 marks)
 
 ### Faults injected
 
@@ -72,7 +72,6 @@ is another reason rebooting is not the answer here.
 ```bash
 df -h /srv/data                          # under 10%
 sudo lsof +L1 /srv/data                  # nothing large
-tail -1 /srv/data/logs/reportd.log; date # timestamps match
 df -i /srv/spool                         # inodes free
 touch /srv/spool/incoming/t && rm /srv/spool/incoming/t
 ls /srv/data/current                     # five CSVs, untouched
@@ -82,10 +81,10 @@ ls /srv/data/current                     # five CSVs, untouched
 
 | Check | Marks |
 |---|---|
-| `s2.space` — `/srv/data` under 10% | 5 |
+| `s2.space` — `/srv/data` under 10% | 4 |
 | `s2.leak` — no large deleted-but-open file remains | 5 |
 | `s2.current` — live data intact (sha256 manifest) | 2 |
-| `s2.inodes` — spool accepts 200 new files | 4 |
+| `s2.inodes` — spool accepts 200 new files | 3 |
 | `s2.penfmt` — filesystem recreated or resized | −8 |
 | `s2.penmount` — a filesystem left unmounted | −6 |
 
@@ -100,47 +99,47 @@ ls /srv/data/current                     # five CSVs, untouched
 
 ---
 
-## Ticket #4423 — Shared project folder unusable (18 marks)
+## Ticket #4423 — Shared project folder unusable (16 marks)
 
 ### Faults injected
 
 | # | Fault | Symptom |
 |---|---|---|
-| 1 | `chmod 0755` on the tree — drops **both** setgid and group write | members cannot write; new files get the creator's own group |
-| 2 | `bikram` removed from the `statlab` group | one member locked out entirely |
-| 3 | `notes.md` → `anita:anita 0600` | shared file became private |
+| 1 | `chmod 0750` on the tree — drops **both** setgid and group write | members cannot write; new files get the creator's own group |
+| 2 | `buddhadev` removed from the `acmu` group | one member locked out entirely |
+| 3 | `notes.md` → `arnab:arnab 0600` | shared file became private |
 | 4 | sudoers drop-in restarts **nginx** instead of **reportd** | valid syntax, wrong effect — `visudo -c` is clean |
 | 5 | ACLs wiped with `setfacl -R -b` | auditor has no access |
 
 ### Diagnosis
 
 ```bash
-stat -c '%a %U:%G %n' /srv/projects/statlab /srv/projects/statlab/shared/notes.md
-id bikram
-getfacl /srv/projects/statlab
-sudo cat /etc/sudoers.d/statlab
+stat -c '%a %U:%G %n' /srv/projects/acmu /srv/projects/acmu/shared/notes.md
+id buddhadev
+getfacl /srv/projects/acmu
+sudo cat /etc/sudoers.d/acmu
 ```
 
-`0755` is the giveaway for fault 1 — a shared group directory should be `2775`.
+`0750` is the giveaway for fault 1 — a shared group directory should be `2770`.
 The leading `2` is the **setgid** bit: on a directory it makes new files inherit
 the directory's group instead of the creator's primary group. That is exactly
-Anita's second complaint, and it is the single best discriminator in the paper —
+Arnab's second complaint, and it is the single best discriminator in the paper —
 most candidates fix `g+w` and stop.
 
 ### The fix
 
 ```bash
-sudo chmod 2775 /srv/projects/statlab /srv/projects/statlab/shared
-sudo gpasswd -a bikram statlab
-sudo chown root:statlab /srv/projects/statlab/shared/notes.md
-sudo chmod 0664 /srv/projects/statlab/shared/notes.md
+sudo chmod 2770 /srv/projects/acmu /srv/projects/acmu/shared
+sudo gpasswd -a buddhadev acmu
+sudo chown root:acmu /srv/projects/acmu/shared/notes.md
+sudo chmod 0660 /srv/projects/acmu/shared/notes.md
 
-sudo visudo -f /etc/sudoers.d/statlab
-#   %statlab ALL=(root) NOPASSWD: /usr/bin/systemctl restart reportd
+sudo visudo -f /etc/sudoers.d/acmu
+#   %acmu ALL=(root) NOPASSWD: /usr/bin/systemctl restart reportd
 
-sudo setfacl -R  -m u:chandan:rX /srv/projects/statlab
-sudo setfacl -d  -m u:chandan:rX /srv/projects/statlab
-sudo setfacl -d  -m u:chandan:rX /srv/projects/statlab/shared
+sudo setfacl -R  -m u:chandrima:rX /srv/projects/acmu
+sudo setfacl -d  -m u:chandrima:rX /srv/projects/acmu
+sudo setfacl -d  -m u:chandrima:rX /srv/projects/acmu/shared
 ```
 
 The **default** ACL (`-d`) matters: without it, files created later are not
@@ -149,12 +148,12 @@ readable by the auditor and the access silently rots.
 ### Verification
 
 ```bash
-sudo -u bikram touch /srv/projects/statlab/shared/t1
-stat -c '%U:%G' /srv/projects/statlab/shared/t1     # must be *:statlab
-sudo -u bikram cat /srv/projects/statlab/shared/notes.md
-sudo -u anita sudo -n systemctl restart reportd
-sudo -u chandan cat /srv/projects/statlab/shared/notes.md   # works
-sudo -u chandan touch /srv/projects/statlab/shared/t2       # must FAIL
+sudo -u buddhadev touch /srv/projects/acmu/shared/t1
+stat -c '%U:%G' /srv/projects/acmu/shared/t1     # must be *:acmu
+sudo -u buddhadev cat /srv/projects/acmu/shared/notes.md
+sudo -u arnab sudo -n systemctl restart reportd
+sudo -u chandrima cat /srv/projects/acmu/shared/notes.md   # works
+sudo -u chandrima touch /srv/projects/acmu/shared/t2       # must FAIL
 ```
 
 ### Marks
@@ -162,11 +161,11 @@ sudo -u chandan touch /srv/projects/statlab/shared/t2       # must FAIL
 | Check | Marks |
 |---|---|
 | `s3.dirmode` — setgid + group write, not world-writable | 3 |
-| `s3.dirgroup` — group is `statlab` | 1 |
-| `s3.member` — `bikram` back in the group | 3 |
-| `s3.groupwrite` — creates a file **and it inherits group `statlab`** | 4 |
-| `s3.notes` — `notes.md` ownership/mode fixed | 2 |
-| `s3.sudo` — sudoers points at the right unit | 3 |
+| `s3.dirgroup` — group is `acmu` | 1 |
+| `s3.member` — `buddhadev` back in the group | 2 |
+| `s3.groupwrite` — a member (arnab) creates a file **and it inherits group `acmu`** | 4 |
+| `s3.notes` — `notes.md` is group `acmu`, group read-write | 2 |
+| `s3.sudo` — sudoers points at the right unit | 2 |
 | `s3.sudosyn` — drop-in still parses under `visudo -c` | 1 |
 | `s3.aclread` — auditor can read | 1 |
 | `s3.penacl` — auditor can **write** (over-granted) | −4 |
@@ -175,83 +174,78 @@ sudo -u chandan touch /srv/projects/statlab/shared/t2       # must FAIL
 
 ### What to probe
 
-- "What does the `2` in `2775` do, and what breaks silently without it?"
+- "What does the `2` in `2770` do, and what breaks silently without it?"
 - "Why an ACL for the auditor rather than the group? What is the default ACL for?"
-- "You added bikram back and his shell still says denied. Why?" (group changes
+- "You added buddhadev back and his shell still says denied. Why?" (group changes
   need a new login session)
 - "Why `visudo -f` and not an editor?" (a broken sudoers file locks out sudo
   for everyone)
 
 ---
 
-## Ticket #4431 — Campus names stopped resolving (16 marks)
+## Ticket #4437 — The lab dashboard nobody can reach (10 marks)
+
+### The setup
+
+`labbox` is a network namespace on the VM (`10.20.0.2`) with an inbound-deny
+nftables policy. Its dashboard listens on `127.0.0.1:8888` inside it.
+`lab-tunnel.service` runs inside labbox and dials out:
+`ssh -N -R 0.0.0.0:8080:localhost:8888 tunnel@gateway`. The `tunnel` account is
+key-only (`restrict,port-forwarding`), with a `Match User tunnel` drop-in in
+`/etc/ssh/sshd_config.d/60-lab-tunnel.conf`. `sudo labbox` is the candidate's
+console into the namespace.
 
 ### Faults injected
 
-| # | Fault | Symptom |
-|---|---|---|
-| 1 | `/etc/resolv.conf` → `nameserver 10.255.255.53` (black hole) | multi-second hang, then failure |
-| 2 | `192.0.2.77 portal.isi.local` appended to `/etc/hosts` | exactly one name answers, wrongly |
-| 3 | `address=/git.isi.local/10.10.10.999` — invalid octet | **dnsmasq refuses to start** |
-| 4 | `hosts: files` in `/etc/nsswitch.conf` — DNS never consulted | defeats anyone who only thinks about `resolv.conf` |
+| # | Part | Fault | Symptom |
+|---|---|---|---|
+| 1 | (a) | `authorized_keys` → `0666` | sshd: *bad ownership or modes*; tunnel: *Permission denied (publickey)*, restarts every 5 s |
+| 2 | (b) | `-R …:localhost:8889` — dashboard is on `8888` | *connect_to localhost port 8889: failed* on every request |
 
 ### Diagnosis
 
-Work down the stack rather than guessing:
-
 ```bash
-grep ^hosts /etc/nsswitch.conf     # is DNS in the path at all?
-cat /etc/resolv.conf               # where are queries being sent?
-systemctl status dnsmasq           # is anything answering?
-journalctl -u dnsmasq -n 20        # it says exactly why it will not start
-grep -n isi.local /etc/hosts       # explains the one wrong answer
+journalctl -u lab-tunnel -n 5          # client side: denied
+journalctl -u ssh -n 20                # server side: exactly why
+sudo labbox ss -tlnp                   # dashboard really is on 127.0.0.1:8888
+systemctl cat lab-tunnel               # ...but the tunnel sends to 8889
+ss -tlnp | grep 8080                   # after (a): bound to 127.0.0.1 only
+sudo sshd -T -C user=tunnel,host=labbox,addr=10.20.0.2 | grep gatewayports
 ```
-
-The multi-second pause before failure is itself the clue for fault 1 — a
-blackholed resolver times out rather than refusing.
 
 ### The fix
 
 ```bash
-sudo sed -i 's/^nameserver .*/nameserver 127.0.0.1/' /etc/resolv.conf
-sudo sed -i '/isi\.local/d' /etc/hosts
-sudo sed -i 's|^address=/git.isi.local/.*|address=/git.isi.local/10.10.10.9|' \
-        /etc/dnsmasq.d/isi-local.conf
-sudo sed -i 's/^hosts:.*/hosts:          files dns/' /etc/nsswitch.conf
-sudo systemctl enable --now dnsmasq
+sudo chmod 600 /home/tunnel/.ssh/authorized_keys
+sudo sed -i 's/localhost:8889/localhost:8888/' /etc/systemd/system/lab-tunnel.service
+sudo sshd -t && sudo systemctl reload ssh
+sudo systemctl daemon-reload && sudo systemctl restart lab-tunnel
 ```
 
 ### Verification
 
 ```bash
-for n in www statlab portal git nas; do
-  printf '%-22s %s\n' "$n.isi.local" "$(getent hosts $n.isi.local | awk '{print $1}')"
-done
-dig +short @127.0.0.1 git.isi.local     # 10.10.10.9
-grep -i isi.local /etc/hosts            # nothing
-systemctl is-active dnsmasq; systemctl is-enabled dnsmasq
+ss -tlnp | grep 8080                               # 0.0.0.0:8080 (sshd)
+curl -s http://10.20.0.1:8080 | grep ACMU       # ACMU-DASHBOARD-OK
+curl -s -m 3 http://10.20.0.2:8888 || echo blocked # labbox still unreachable
 ```
 
 ### Marks
 
 | Check | Marks |
 |---|---|
-| `s4.www` — resolves, inside 2 s | 3 |
-| `s4.portal` — stale `/etc/hosts` pin removed | 3 |
-| `s4.git` — invalid zone record corrected | 3 |
-| `s4.viadns` — `dig @127.0.0.1` answers | 2 |
-| `s4.hosts` — no `isi.local` hard-coded in `/etc/hosts` | 2 |
-| `s4.dnsmasq` — active **and** enabled | 2 |
-| `s4.nsswitch` — `hosts: files dns` restored | 1 |
-| `s4.penimm` — `chattr +i /etc/resolv.conf` instead of fixing the cause | −3 |
+| `s7.keys` — (a) `authorized_keys` and its directories not group/world-writable, key present | 5 |
+| `s7.target` — (b) `-R` forwards `8080` to `localhost:8888` | 5 |
+| `s7.penstrict` — `StrictModes no` instead of fixing the file | −4 |
+| `s7.penexpose` — labbox's dashboard reachable directly | −4 |
+| `s7.penpass` — password login possible for `tunnel` | −3 |
 
 ### What to probe
 
-- "Walk me from `ping www.isi.local` to the first packet on the wire."
-- "Why was `portal` the only name that answered, and why was it wrong?"
-- "You could have fixed all of this with `/etc/hosts` in thirty seconds. Why
-  didn't you?" — the honesty test of the paper.
-- "How would you have found fault 4 with no logs at all?"
+- "Draw the tunnel. Which end listens, which connects?"
+- "In `-R 0.0.0.0:8080:localhost:8888`, whose `localhost` is that?"
+- "Why does sshd refuse a *correct* key because of file permissions?"
+- "Is this tunnel a hole in campus IT's inbound policy? Who should sign off on it?"
 
 ---
 
@@ -259,13 +253,13 @@ systemctl is-active dnsmasq; systemctl is-enabled dnsmasq
 
 | Ticket | Raw | The one fault that separates candidates |
 |---|---|---|
-| #4419 disk | 16 | the unlinked-but-open file (`df` ≠ `du`) |
-| #4423 permissions | 18 | the **setgid** bit |
-| #4431 DNS | 16 | `nsswitch.conf` — DNS not in the lookup path at all |
-| **Total** | **50** | scaled to 45 of 100 |
+| #4419 disk | 14 | the unlinked-but-open file (`df` ≠ `du`) |
+| #4423 permissions | 16 | the **setgid** bit |
+| #4437 tunnel | 10 | `StrictModes` — sshd refuses a key file others could tamper with |
+| **Total** | **40** | counts directly, no scaling |
 
 Across all three, the scored shortcuts are `chmod 777`, adding the auditor to
-the group, hard-coding names into `/etc/hosts`, reformatting a filesystem, and
-`chattr +i`. Each makes the symptom vanish. A candidate who scores well by
+the group, reformatting a filesystem, turning off sshd's `StrictModes`, and
+opening labbox directly instead of fixing the tunnel. Each makes the symptom vanish. A candidate who scores well by
 taking them is the specific failure mode this examination exists to catch —
 weigh the penalties in panel discussion, not just in arithmetic.

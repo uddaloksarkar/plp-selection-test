@@ -31,16 +31,27 @@ questions, in depth, not twelve shallow ones.
 - How do you stop all three of these recurring next month?
 
 **S3 — permissions**
-- What does the `2` in `2775` do, and what breaks silently without it?
+- What does the `2` in `2770` do, and what breaks silently without it?
 - Why an ACL for the auditor rather than adding him to the group?
-- You added bikram back to the group and his shell still says denied. Why?
+- You added buddhadev back to the group and his shell still says denied. Why?
 - Why `visudo -f` and not `vim`? What happens if you get sudoers wrong?
 
-**S4 — DNS**
+**S4 — DNS** (optional scenario)
 - Walk me from `ping www.isi.local` to the first packet on the wire.
 - Why did exactly one name answer, and answer wrongly?
 - You could have fixed all of it with `/etc/hosts` in thirty seconds. Why didn't you?
 - How would you have found the `nsswitch.conf` fault with no logs at all?
+
+**S7 — reverse SSH tunnel**
+- Draw the tunnel. Which end listens, which end connects, and in which direction
+  does a colleague's request travel?
+- In `-R 0.0.0.0:8080:localhost:8888`, whose `localhost` is that?
+- The key was right and sshd still refused it. Why does sshd care who can write
+  `authorized_keys`, and why is `StrictModes no` the wrong fix?
+- `curl localhost:8080` worked on the gateway but not from anywhere else. What
+  was listening where, and which end of the `-R` is which?
+- Why does campus IT allow labbox out but not in, and is this tunnel a hole in
+  that policy?
 
 **S5 — Python**
 - Why did it work for you as root but not for the analyst?

@@ -28,7 +28,7 @@
   Project Linked Person --- Selection \qquad 2026--2027\\[0.35em]
   Subject: Systems Support (Software, Hardware and Web)\\[0.35em]
   Part B --- Practical Examination\\[0.35em]
-  Total: $16 + 18 + 16 = 50$ marks \qquad Duration: 90 minutes
+  Total: $14 + 16 + 10 = 40$ marks \qquad Duration: 90 minutes
 \end{center}
 
 \begin{framed}
@@ -63,59 +63,89 @@ recorded. Questions may be attempted in any order.
 \begin{enumerate}[label=\textbf{Q\arabic*.},leftmargin=2.6em,labelsep=0.6em,itemsep=1.6em,topsep=1.2em]
 
 %================================================================== Q1
-\item \textbf{Disk full on the lab file server.} \hfill [16 marks]
+\item \textbf{Disk full on the lab file server.} \hfill [14 marks]
 
-\emph{Reported by a research scholar:} ``I cannot copy anything into
+\emph{Reported by Debarshi Roy, research scholar:} ``I cannot copy anything into
 \texttt{/srv/data} --- it says the disk is full, and nothing I can see in there
 accounts for that much space. Submitting a job into \texttt{/srv/spool}
 \emph{also} says the disk is full, but \texttt{df -h} shows that one has plenty
 of space left. That part makes no sense to me.''
 
-Two storage faults, on two different filesystems. \texttt{/srv/data} is
-genuinely full, and the files you can see do not add up to the space reported
-as used. \texttt{/srv/spool} refuses to create files \emph{although \texttt{df}
-reports free space} --- something other than free bytes has run out.
+\begin{framed}
+\textbf{Background: this server has three separate disks.}
+\texttt{/srv/data} and \texttt{/srv/spool} look like ordinary folders, but each
+one is really its own small disk, attached at that path (a \emph{mount point}).
+The rest of the system lives on a third, much larger disk.
 
-\hd{How to reproduce it}
+\smallskip
+\begin{tabular}{@{}>{\ttfamily}l l r@{}}
+/          & the system disk         & about 24 GB \\
+/srv/data  & the project data disk   & 1 GB \\
+/srv/spool & the job-submission disk & 48 MB \\
+\end{tabular}
+\smallskip
+
+Each disk fills up on its own: one being full says nothing about the others.
+\verb|df -h / /srv/data /srv/spool| prints one line per disk.
+\end{framed}
+
+The two complaints look alike --- both end in ``No space left on device'' ---
+but they are \textbf{two unrelated faults on two different disks}, with
+different causes. Fixing one does nothing for the other. Tackle them in either
+order; each is marked on its own.
+
+%------------------------------------------------------------------ Q1(a)
+\hd{(a)\enspace \texttt{/srv/data} is full \hfill [11 marks]}
+\texttt{/srv/data} is at 100\%, and the files you can see there do not add up
+to the space reported as used.
+
+\textit{Reproduce:}
 \begin{shell}
 df -h /srv/data                        # 100% used
-df -h /srv/spool                       # shows space free
-touch /srv/spool/incoming/testjob      # "No space left on device"
-sudo du -sh /srv/data                  # smaller than df says is in use
+sudo du -sh /srv/data                  # much smaller than df says is in use
 \end{shell}
 
-\hd{What to fix}
-\begin{enumerate}[label=\textbf{\arabic{enumi}.\arabic*},leftmargin=2.8em,itemsep=0.3em]
-  \item Bring \texttt{/srv/data} back to \textbf{under 10\% used} (the
-        \texttt{Use\%} column of \texttt{df -h}). Freeing the largest obvious
-        files will not get you there on its own. Treat any difference between
-        what \texttt{df} says is used and what \texttt{du} can account for as
-        something you still have to explain.
-  \item Get the reporting daemon writing to
-        \texttt{/srv/data/logs/reportd.log} again. It is running; its writes
-        were failing. Check the last line's timestamp rather than assuming.
-  \item Make \texttt{/srv/spool} able to accept new files. It is a separate
-        filesystem with a separate fault and it is \emph{not} short of space:
-        freeing bytes there will not help. A filesystem can exhaust more than
-        one kind of resource, and \texttt{df} has another mode that reports the
-        other one.
-  \item In \verb|~/FIXLOG.md|, explain in two or three sentences why
-        \texttt{/srv/spool} reported ``No space left on device'' while
-        \texttt{df} showed free space.
-\end{enumerate}
+\textit{Fix:} bring \texttt{/srv/data} back to \textbf{under 10\% used} (the
+\texttt{Use\%} column of \texttt{df -h}). There is more than one reason this
+disk is full: freeing the largest obvious files will not get you there on its
+own. Treat any difference between what \texttt{df} says is used and what
+\texttt{du} can account for as something you still have to explain.
 
-\hd{How to check your work}
+\textit{Check:}
 \begin{shell}
 df -h /srv/data                       # Use% under 10%
-touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
 ls /srv/data/current                  # five survey-block CSV files, still there
 \end{shell}
 
-\hd{Constraints --- these are marked}
+%------------------------------------------------------------------ Q1(b)
+\hd{(b)\enspace \texttt{/srv/spool} refuses new files \hfill [3 marks]}
+New files cannot be created on \texttt{/srv/spool}, \emph{although
+\texttt{df -h} reports free space on it}. Something other than free space has
+run out. This has nothing to do with \texttt{/srv/data}.
+
+\textit{Reproduce:}
+\begin{shell}
+df -h /srv/spool                       # shows space free
+touch /srv/spool/incoming/testjob      # "No space left on device"
+\end{shell}
+
+\textit{Fix:} make \texttt{/srv/spool} able to accept new files again. It is
+\emph{not} short of space: freeing bytes there will not help. A filesystem can
+run out of more than one kind of resource, and \texttt{df} has another mode
+that reports the other one. Then, in \verb|~/FIXLOG.md|, explain in two or
+three sentences why \texttt{/srv/spool} reported ``No space left on device''
+while \texttt{df -h} showed free space.
+
+\textit{Check:}
+\begin{shell}
+touch /srv/spool/incoming/t && echo OK && rm /srv/spool/incoming/t
+\end{shell}
+
+\hd{Constraints --- these apply to both parts, and are marked}
 \begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
   \item Nothing under \texttt{/srv/data/current} may be deleted or changed.
         It is live survey data with no second copy on this machine.
-  \item Do not reformat, recreate, resize or unmount either filesystem.
+  \item Do not reformat, recreate, resize or unmount either disk.
   \item \texttt{/srv/data/archive/README.txt} says what is safe to remove
         there. Read it before deleting anything.
   \item Rebooting clears one of these faults. On a real file server at 11am
@@ -123,139 +153,216 @@ ls /srv/data/current                  # five survey-block CSV files, still there
 \end{itemize}
 
 %================================================================== Q2
-\item \textbf{Shared project folder unusable.} \hfill [18 marks]
+\item \textbf{Shared project folder unusable.} \hfill [16 marks]
 
-\emph{Reported for the Statistics Lab group:} ``Bikram cannot save anything
+\emph{Reported for the ACMU Lab group:} ``Buddhadev cannot save anything
 into \texttt{shared/}, and cannot open \texttt{notes.md} at all. When I create
 a file there, the others cannot edit it --- it comes out belonging to my own
 personal group instead of the project group.
 \texttt{sudo systemctl restart reportd} used to work for all of us; now it is
-refused. And Chandan from the internal audit cell needs to \emph{read} that
+refused. And Chandrima from the internal audit cell needs to \emph{read} that
 folder for the annual review. He cannot see anything.''
 
-\texttt{/srv/projects/statlab/} is a shared area for the \texttt{statlab}
-group. Several things about it have been changed, and the auditor has no
-access at all.
+\begin{framed}
+\textbf{Background: who is who.} \texttt{/srv/projects/acmu/} (and
+\texttt{shared/} inside it) belongs to the \texttt{acmu} group. Anyone who
+is not a member or the auditor should have no access at all.
 
-\hd{How to reproduce it}
+\smallskip
+\begin{tabular}{@{}>{\ttfamily}l l l@{}}
+arnab   & member of \texttt{acmu} & read and write everything \\
+buddhadev  & member of \texttt{acmu} & read and write everything \\
+chandrima & auditor, \textbf{not} a member & read everything, write nothing \\
+\end{tabular}
+\smallskip
+
+To see the current state:
 \begin{shell}
-sudo -u bikram touch /srv/projects/statlab/shared/test     # Permission denied
-sudo -u bikram cat /srv/projects/statlab/shared/notes.md   # Permission denied
-sudo -u anita sudo -n systemctl restart reportd            # refused
-sudo -u chandan cat /srv/projects/statlab/shared/notes.md  # Permission denied
+cd /srv/projects/acmu
+stat -c '%a %U:%G %n' . shared shared/notes.md
+id buddhadev; getfacl shared; sudo cat /etc/sudoers.d/acmu
+\end{shell}
+\end{framed}
 
-stat -c '%a %U:%G %n' /srv/projects/statlab
-id bikram ; getfacl /srv/projects/statlab
-sudo cat /etc/sudoers.d/statlab
+The complaints overlap, but underneath them are \textbf{five independent
+faults}, each with its own cause and fix. Fixing one does nothing for the
+others; each is marked on its own. Tackle them in any order. Test as the users
+named, not as root --- root can do everything, so a check run as root proves
+nothing.
+
+%------------------------------------------------------------------ Q2(a)
+\hd{(a)\enspace Buddhadev is no longer in the \texttt{acmu} group \hfill [2 marks]}
+\textit{Reproduce:} \verb|id buddhadev| --- \texttt{acmu} is missing.
+\textit{Fix:} put him back, without changing any of his other groups.
+\begin{shell}
+id -nG buddhadev | grep -qw acmu && echo "buddhadev is a member"
 \end{shell}
 
-\hd{What to fix}
-\begin{enumerate}[label=\textbf{\arabic{enumi}.\arabic*},leftmargin=2.8em,itemsep=0.25em]
-  \item Everyone in \texttt{statlab} can read and write everything under
-        \texttt{/srv/projects/statlab/}.
-  \item A file created there by one member ends up usable by the whole group.
-  \item \texttt{notes.md} is a shared file again, not one person's private file.
-  \item Members of \texttt{statlab} --- and only them --- can run
-        \texttt{sudo -n systemctl restart reportd} without a password.
-  \item Chandan can \textbf{read} that tree.
-\end{enumerate}
+%------------------------------------------------------------------ Q2(b)
+\hd{(b)\enspace The shared folder: group write, and which group new files get \hfill [8 marks]}
+Members cannot create files in the folder, and once they can, new files come
+out in the creator's \emph{personal} group instead of \texttt{acmu}. Both
+are about the permission bits on the two directories
+\texttt{/srv/projects/acmu} and \texttt{shared/}. Arnab is still a member,
+so test as her.
 
-\hd{How to check your work}
-Test as the affected users, not as root.
+\textit{Fix:} both directories let the group read and write, give everyone
+else no access, and make new files inside them belong to \texttt{acmu}
+automatically. A directory can carry more than the nine permission bits you see
+first.
 \begin{shell}
-sudo -u bikram touch /srv/projects/statlab/shared/t1 && echo "write OK"
-stat -c '%U:%G' /srv/projects/statlab/shared/t1    # group must be: statlab
-sudo rm -f /srv/projects/statlab/shared/t1
-sudo -u bikram cat /srv/projects/statlab/shared/notes.md >/dev/null && echo "read OK"
-sudo -u anita sudo -n systemctl restart reportd && echo "sudo OK"
-sudo -u chandan cat /srv/projects/statlab/shared/notes.md >/dev/null && echo "auditor read OK"
-sudo -u chandan touch /srv/projects/statlab/shared/t2 && echo "PROBLEM: auditor can write"
+sudo -u arnab touch /srv/projects/acmu/shared/t1 && echo "write OK"
+stat -c '%U:%G' /srv/projects/acmu/shared/t1     # group must be: acmu
+sudo rm -f /srv/projects/acmu/shared/t1
 \end{shell}
-The second line is the one people miss. If the group comes out as anything
-other than \texttt{statlab}, the second complaint is not fixed yet.
+The \texttt{stat} line is the one people miss: if the group comes out as
+\texttt{arnab}, this part is not fixed yet.
 
-\hd{Constraints --- these are marked}
+%------------------------------------------------------------------ Q2(c)
+\hd{(c)\enspace \texttt{notes.md} has become private \hfill [2 marks]}
+\texttt{shared/notes.md} is the group's working file, but now belongs to one
+person and only she can read it. \textit{Fix:} group \texttt{acmu},
+readable and writable by the group, no access for anyone else.
+\begin{shell}
+stat -c '%a %G' /srv/projects/acmu/shared/notes.md    # 660 acmu
+\end{shell}
+
+%------------------------------------------------------------------ Q2(d)
+\hd{(d)\enspace The group's \texttt{sudo} right is broken \hfill [3 marks]}
+Members of \texttt{acmu} --- and only them --- should be able to run
+\texttt{sudo -n systemctl restart reportd} without a password. The rule is in
+\texttt{/etc/sudoers.d/acmu} and no longer does what it was meant to.
+\textit{Fix:} correct the rule, editing the file only with
+\texttt{sudo visudo -f /etc/sudoers.d/acmu} --- never a plain editor.
+\begin{shell}
+sudo -u arnab sudo -n systemctl restart reportd && echo "sudo OK"
+sudo visudo -cf /etc/sudoers.d/acmu                   # parsed OK
+\end{shell}
+
+%------------------------------------------------------------------ Q2(e)
+\hd{(e)\enspace The auditor cannot read the folder \hfill [1 mark]}
+Chandrima's access came from per-user entries on the files themselves, and those
+have been wiped. \textit{Fix:} give him read-only access to everything under
+\texttt{/srv/projects/acmu/}, including files created there in future ---
+\emph{without} adding him to the group.
+\begin{shell}
+sudo -u chandrima cat /srv/projects/acmu/shared/notes.md   # must work
+sudo -u chandrima touch /srv/projects/acmu/shared/t2       # must FAIL
+\end{shell}
+
+\hd{When all five are done}
+Buddhadev's original complaint needs (a), (b) and (c) together:
+\begin{shell}
+sudo -u buddhadev touch /srv/projects/acmu/shared/t3        # must work
+sudo -u buddhadev cat /srv/projects/acmu/shared/notes.md    # must work
+\end{shell}
+
+\hd{Constraints --- these apply to every part, and are marked}
 \begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
-  \item \textbf{Chandan must not be put into the \texttt{statlab} group.}
+  \item \textbf{Chandrima must not be put into the \texttt{acmu} group.}
         Audit policy forbids putting auditors into the groups they audit. He
         must be able to read and must \emph{not} be able to write.
   \item No \texttt{chmod 777}, anywhere. This is a multi-user machine.
   \item Do not change anyone's login shell, password or home directory.
 \end{itemize}
 
-\emph{Hint.} One of these faults is about which \textbf{bits are set on a
-directory}, not about who owns it --- a directory carries more than the nine
-permission bits you see first. Group membership changes do not affect a shell
-that is already open. Edit anything under \texttt{/etc/sudoers.d/} with
-\texttt{visudo -f}.
+\emph{Hint.} Group membership changes do not affect a shell that is already
+open; \texttt{sudo -u} \textit{user} starts a fresh one.
 
 %================================================================== Q3
-\item \textbf{Campus names stopped resolving.} \hfill [16 marks]
+\item \textbf{The lab dashboard nobody can reach.} \hfill [10 marks]
 
-\emph{Reported by the systems group:} ``This host cannot resolve any campus
-name since the patching window. \texttt{ping www.isi.local} sits there for
-several seconds and then fails. The odd one is \texttt{portal.isi.local} ---
-that \emph{does} answer, but with an address that has not been ours since 2023.
-Please do not paper over this with hosts-file entries; we have forty more
-machines behind this one.''
+\emph{Reported by the ACMU Lab:} ``Our results dashboard has been down
+since Friday's maintenance. We open \texttt{http://gateway:8080} and get
+nothing. Somebody said the tunnel service on labbox keeps restarting. We need
+it back before the review meeting.''
 
-The host runs its own resolver (\textbf{dnsmasq}) serving the
-\texttt{isi.local} zone and forwarding everything else upstream. The addresses
-it is supposed to hand out:
+\begin{framed}
+\textbf{Background: how the dashboard gets out of the basement.} The dashboard
+runs on \textbf{labbox}, a basement machine. Campus IT lets labbox connect
+\emph{out}, but nothing may connect \emph{in}. So labbox publishes it through
+\textbf{gateway} (this VM) with a \emph{reverse SSH tunnel}:
+\begin{shell}
+colleagues --> gateway:8080 ==== SSH tunnel ====> labbox --> 127.0.0.1:8888
+              (this VM)    <-- labbox dials OUT --          (the dashboard)
+\end{shell}
+labbox runs, as the service \texttt{lab-tunnel}:
+\begin{shell}
+ssh -N -R 0.0.0.0:8080:localhost:8888 tunnel@gateway
+\end{shell}
 
-\begin{center}
-\begin{tabular}{>{\ttfamily}l @{\qquad} >{\ttfamily}l}
-\textrm{\textbf{name}} & \textrm{\textbf{address}}\\[0.15em]
-www.isi.local     & 127.0.0.1\\
-statlab.isi.local & 127.0.0.1\\
-portal.isi.local  & 127.0.0.1\\
-git.isi.local     & 10.10.10.9\\
-nas.isi.local     & 10.10.10.20\\
+In \texttt{-R}, the first half (\texttt{0.0.0.0:8080}) is where
+\emph{gateway} listens. The second half (\texttt{localhost:8888}) is where
+labbox delivers each connection, \emph{as labbox sees it} --- so that
+\texttt{localhost} is labbox's own.
+
+\smallskip
+\begin{tabular}{@{}l l l@{}}
+\textbf{gateway} & \texttt{10.20.0.1}, this VM & you are already here \\
+\textbf{labbox}  & \texttt{10.20.0.2}, basement & \texttt{sudo labbox} opens its console \\
 \end{tabular}
-\end{center}
 
-\hd{How to reproduce it}
+\smallskip
+labbox is simulated on this VM and shares its files; its own are under
+\texttt{/opt/labbox/}. Its services are \texttt{labbox-dashboard} and
+\texttt{lab-tunnel}.
+\end{framed}
+
+Friday's maintenance broke the tunnel in \textbf{two independent places}.
+Each has its own cause and fix and is marked on its own; fixing one does
+nothing for the others. Tackle them in any order --- though you will only
+\emph{see} (b) in action once (a) lets the tunnel log in.
+
+%------------------------------------------------------------------ Q3(a)
+\hd{(a)\enspace gateway refuses labbox's key \hfill [5 marks]}
+labbox logs in to gateway as \texttt{tunnel}, with a key and no password.
+gateway is rejecting it, so the tunnel never comes up and restarts every few
+seconds. The client's log says \emph{that} it was denied; the server's says
+\emph{why}.
 \begin{shell}
-getent hosts www.isi.local        # nothing, after a long pause
-getent hosts git.isi.local        # nothing
-getent hosts portal.isi.local     # answers 192.0.2.77 -- wrong address
-
-dig +short @127.0.0.1 git.isi.local
-systemctl status dnsmasq
+journalctl -u lab-tunnel -n 5          # Permission denied (publickey...)
+journalctl -u ssh -n 20                # gateway's side of the story
+\end{shell}
+\textit{Fix:} make gateway accept the key again. The key itself is correct;
+sshd refuses an \texttt{authorized\_keys} file that others could have tampered
+with.
+\begin{shell}
+journalctl -u ssh -n 5                 # Accepted publickey for tunnel
 \end{shell}
 
-\hd{What to fix}
-\begin{enumerate}[label=\textbf{\arabic{enumi}.\arabic*},leftmargin=2.8em,itemsep=0.25em]
-  \item All five names resolve to the correct addresses, for every user on the
-        host, in under a second.
-  \item The answers come from the resolver, not from a local file.
-  \item It still works after a reboot.
-\end{enumerate}
-
-\hd{How to check your work}
+%------------------------------------------------------------------ Q3(b)
+\hd{(b)\enspace The tunnel leads to the wrong place \hfill [5 marks]}
+The \texttt{-R} setting decides where on labbox each connection ends up. It
+must lead to the dashboard.
 \begin{shell}
-for n in www statlab portal git nas; do
-  printf '%-22s %s\n' "$n.isi.local" "$(getent hosts $n.isi.local | awk '{print $1}')"
-done
-dig +short @127.0.0.1 git.isi.local     # must print 10.10.10.9
-grep -i isi.local /etc/hosts            # must print nothing at all
-systemctl is-active dnsmasq ; systemctl is-enabled dnsmasq
+sudo labbox ss -tlnp                   # what is really listening on labbox
+systemctl cat lab-tunnel               # where the tunnel sends connections
+\end{shell}
+\textit{Fix:} correct the tunnel in
+\texttt{/etc/systemd/system/lab-tunnel.service}, then
+\texttt{systemctl daemon-reload} and \texttt{systemctl restart lab-tunnel}.
+\begin{shell}
+systemctl cat lab-tunnel | grep -- -R  # ends in localhost:8888
 \end{shell}
 
-\hd{Constraints --- these are marked}
+\hd{When both are done}
+\begin{shell}
+curl -s http://10.20.0.1:8080 | grep ACMU   # ACMU-DASHBOARD-OK
+\end{shell}
+You can also open \texttt{http://192.168.56.10:8080} in a browser on your own
+machine --- that is what the colleagues see.
+
+\hd{Constraints --- these apply to every part, and are marked}
 \begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
-  \item \textbf{Do not put \texttt{isi.local} names into \texttt{/etc/hosts}.}
-        The systems group will not maintain hosts files across forty machines.
-        It makes the symptom disappear and loses marks.
-  \item Do not make \texttt{/etc/resolv.conf} immutable
-        (\texttt{chattr +i}) to hold a fix in place.
+  \item \textbf{Do not turn off \texttt{StrictModes}} (or any other sshd safety
+        check) to make the key work. Fix the file.
+  \item \textbf{labbox must stay unreachable.} Do not loosen its firewall or
+        move the dashboard off \texttt{127.0.0.1}: going round the tunnel is
+        not fixing it.
+  \item Do not give the \texttt{tunnel} account a password or a login shell.
+  \item Always run \texttt{sudo sshd -t} before reloading sshd. A broken sshd
+        configuration can lock everyone out, you included.
 \end{itemize}
-
-\emph{Hint.} There is more than one fault and they are in different layers. A
-useful order to think in: \emph{is a DNS query being sent at all? where is it
-being sent? is anything answering? is the answer correct?} A service that
-refuses to start will usually say why, in its own log. The long pause before
-failure is itself a clue about which layer is wrong.
 
 \end{enumerate}
 \end{document}

@@ -91,7 +91,7 @@ printf '[Unit]\nAfter=exam-vpngw.service\nRequires=exam-vpngw.service\n' \
 install -d -m 0755 /opt/vpn-handover
 cat > /opt/vpn-handover/central-it-email.txt <<MAIL
 From:    Central IT, Network Services
-To:      Statistics Lab systems contact
+To:      ACMU Lab systems contact
 Subject: Campus VPN parameters for your host  [KEEP THIS]
 
 Your client interface  : 10.100.0.1/24  (wg0)

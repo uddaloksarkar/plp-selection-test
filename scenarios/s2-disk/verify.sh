@@ -29,10 +29,10 @@ fs_not_recreated() {           # UUIDs recorded implicitly: image files still th
   [ "$(stat -c %s /opt/exam/disks/spool.img)" = "50331648" ]
 }
 
-check 5 s2.space      "/srv/data back under 10% used"          data_under_10pct
+check 4 s2.space      "/srv/data back under 10% used"          data_under_10pct
 check 5 s2.leak       "no large deleted-but-open file remains" not big_deleted_open
 check 2 s2.current    "/srv/data/current untouched"            current_intact
-check 4 s2.inodes     "/srv/spool accepts 200 new files"       spool_writable
+check 3 s2.inodes     "/srv/spool accepts 200 new files"       spool_writable
 
 penalty 8 s2.penfmt   "filesystem recreated/resized instead of cleaned" not fs_not_recreated
 penalty 6 s2.penmount "a filesystem is no longer mounted"      not mountpoint -q /srv/data

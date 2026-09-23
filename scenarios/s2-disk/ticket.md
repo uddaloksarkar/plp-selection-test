@@ -1,6 +1,6 @@
 # TICKET #4419 — "Disk full" on the lab file server
 
-**Raised by:** Anita Roy, research scholar · **Priority:** High
+**Raised by:** Debarshi Roy, research scholar · **Priority:** High
 **Assigned:** you · **Host:** this machine · **Raised:** 06:55 today
 
 > "Three of us have hit this since this morning.
@@ -13,94 +13,131 @@
 >
 > I haven't deleted anything, I didn't want to make it worse."
 
-## 1. What exactly is the problem
+## Background: this server has three separate disks
 
-Two different storage faults, on two different filesystems:
+`/srv/data` and `/srv/spool` look like ordinary folders, but each one is really
+its own small disk, attached at that path (a *mount point*). The rest of the
+system lives on a third, much larger disk.
 
-- **`/srv/data`** is genuinely full, and the files you can see there do not
-  add up to the space reported as used.
-- **`/srv/spool`** refuses to create new files **even though `df` reports free
-  space**. Something other than free bytes has run out.
+| Path | What it is | Size |
+|---|---|---|
+| `/` | the system disk | about 24 GB |
+| `/srv/data` | the project data disk | 1 GB |
+| `/srv/spool` | the job-submission disk | 48 MB |
 
-## 2. How to reproduce it
+Each disk fills up on its own: one being full says nothing about the others.
+`df -h` prints one line per disk, so you can see this for yourself:
+
+```bash
+df -h / /srv/data /srv/spool
+```
+
+## Two separate problems
+
+Debarshi's two complaints look alike — both end in "No space left on device" —
+but they are **two unrelated faults on two different disks**, with different
+causes. Fixing one does nothing for the other. Tackle them in either order;
+each is marked on its own.
+
+| | Disk | What is wrong | Marks |
+|---|---|---|---|
+| **(a)** | `/srv/data` | genuinely full, and the visible files do not account for it | 12 |
+| **(b)** | `/srv/spool` | refuses new files, although `df -h` shows free space | 4 |
+
+---
+
+## (a) `/srv/data` is full
+
+### What exactly is the problem
+
+`/srv/data` is at 100%, and the files you can see there do not add up to the
+space reported as used.
+
+### How to reproduce it
 
 ```bash
 df -h /srv/data                         # 100% used
+sudo du -sh /srv/data                   # much smaller than df says is in use
 ```
+
+The second line is the thing Debarshi noticed, and it is worth taking seriously.
+
+### What to fix
+
+**Bring `/srv/data` back to under 10% used** — the `Use%` column of
+`df -h /srv/data`.
+
+Reclaiming space is the job; finding *what* is holding it is the harder half.
+Look at how much space `df` says is in use, then at how much `du` can actually
+account for, and treat any difference between those two numbers as something
+you still have to explain. There is more than one reason this disk is full:
+freeing the largest obvious files will help, but will not get you to 10% on its
+own. Before you delete anything, check whether it is safe to delete — the
+archive directory carries a note saying what has already been copied elsewhere.
+
+### How to check you have fixed it
+
+```bash
+df -h /srv/data                         # Use% under 10%
+ls /srv/data/current                    # five survey-block CSV files, still there
+```
+
+---
+
+## (b) `/srv/spool` refuses new files
+
+### What exactly is the problem
+
+New files cannot be created on `/srv/spool`, **even though `df -h` reports free
+space** on it. Something other than free space has run out. This has nothing to
+do with `/srv/data`.
+
+### How to reproduce it
 
 ```bash
 df -h /srv/spool                        # shows space free
 touch /srv/spool/incoming/testjob       # "No space left on device"
 ```
 
-And the thing Anita noticed, which is worth taking seriously:
+### What to fix
 
-```bash
-sudo du -sh /srv/data                   # much smaller than df says is in use
-```
+**Make `/srv/spool` able to accept new files again.**
 
-## 3. What to fix
+This disk is not short of space — `df -h` will keep telling you it has room, and
+freeing bytes will not help. A filesystem can run out of more than one kind of
+resource, and `df` has another mode that reports the other one. Find what has
+run out, find what consumed it, and clear that. `/srv/spool/queue/README`
+explains what the directory is for and should stay.
 
-Three things. Each is assessed separately, so do as many as you can — an
-incomplete ticket still earns the parts you got right.
+Then, in `~/FIXLOG.md`, explain in two or three sentences why `/srv/spool`
+reported **"No space left on device"** while `df -h` showed free space: name the
+resource that actually ran out, what consumed it, and why the error says "space"
+when space was not the problem. This is marked on whether you understood the
+mechanism, not on length.
 
-**3.1 Bring `/srv/data` back to under 10% used.**
+### How to check you have fixed it
 
-"Under 10%" means the `Use%` column of `df -h /srv/data`. Reclaiming space is
-the job; finding *what* is holding it is the harder half. Look at how much space
-`df` says is in use, then at how much `du` can actually account for, and treat
-any difference between those two numbers as something you still have to explain.
-Freeing the largest obvious files will help but will not get you to 10% on its
-own. Before you delete anything, check whether it is safe to delete — the
-archive directory carries a note saying what has already been copied elsewhere.
-
-**3.2 Make `/srv/spool` able to accept new files again.**
-
-This is a *separate* filesystem with a *separate* fault, and it is not short of
-space — `df -h` will keep telling you it has room. Freeing bytes there will not
-help. A filesystem can exhaust more than one kind of resource, and `df` has
-another mode that reports the other one. Find what has run out, find what
-consumed it, and clear that. `/srv/spool/queue/README` explains what the
-directory is for and should stay.
-
-**3.3 Write the explanation in `~/FIXLOG.md`.**
-
-Specifically: why did `/srv/spool` report **"No space left on device"** while
-`df` showed free space? Two or three sentences naming the actual resource that
-ran out, what consumed it, and why the error message says "space" when space was
-not the problem. This is marked on whether you understood the mechanism, not on
-length.
-
-## 4. How to check you have fixed it
-
-Run these. All three should look right before you move on.
-
-```bash
-df -h /srv/data                         # Use% under 10%
-```
 ```bash
 touch /srv/spool/incoming/testjob && echo OK && rm /srv/spool/incoming/testjob
 ```
-```bash
-ls /srv/data/current                    # five survey-block CSV files, still there
-```
 
-## Constraints — these are marked
+---
+
+## Constraints — these apply to both parts, and are marked
 
 - **Nothing under `/srv/data/current` may be deleted or changed.** That is live
   survey data with no second copy on this machine.
-- Do not reformat, recreate, resize or unmount either filesystem.
+- Do not reformat, recreate, resize or unmount either disk.
 - `/srv/data/archive/README.txt` says what is and is not safe to remove there.
   Read it before deleting anything.
+- Rebooting clears one of these faults. On a real file server at 11am you would
+  not have that option, so treat it as unavailable here too.
 
 ## Notes
 
-- There is more than one reason `/srv/data` is full. Freeing the obvious thing
-  will not get you under 10% on its own.
-- When two tools disagree about the same filesystem, both are usually telling
-  the truth about different things.
-- Rebooting clears one of these faults. On a real file server at 11am you would
-  not have that option, so treat it as unavailable here too.
+- When two tools disagree about the same disk, both are usually telling the
+  truth about different things.
 - Worth knowing about: `df -h`, `df -i`, `du -xh --max-depth=1`, `lsof`,
-  `systemctl`, `journalctl`. Not all of them are relevant.
-- Record symptom, cause, change and verification in `~/FIXLOG.md`.
+  `findmnt`, `systemctl`, `journalctl`. Not all of them are relevant.
+- Record symptom, cause, change and verification in `~/FIXLOG.md`, one entry
+  for each part.

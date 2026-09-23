@@ -1,6 +1,6 @@
 # TICKET #4442 — VPN to the campus e-library is down
 
-**Raised by:** Library liaison, Statistics Lab · **Priority:** Medium-High · **Host:** this machine
+**Raised by:** Library liaison, ACMU Lab · **Priority:** Medium-High · **Host:** this machine
 
 > "This host is the department's gateway to the campus e-library proxy over the
 > WireGuard VPN. Since Monday's security hardening, nothing reaches the proxy.

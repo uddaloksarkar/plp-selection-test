@@ -91,9 +91,9 @@ candidate.
 
 - **Do not score a VM the candidate is still logged into** — a running shell can
   hold files open and skew the disk checks.
-- The disk scenario's `s2.reportd` check wants the log touched within the last
-  40 seconds, so score reasonably soon after the sitting ends, and do not stop
-  services before scoring.
+- Do not stop services before scoring: the disk scenario's `s2.leak` check looks
+  for the collector's held file; stopping the collector releases it, which
+  would award those 5 marks to a candidate who never found the leak.
 - The VPN scenario's `s6.handshake` check wants a handshake inside 180 seconds.
   `PersistentKeepalive` keeps it fresh as long as the tunnel is genuinely up.
 - If you re-run `score.sh` twice, that is fine; all checks are read-only except
