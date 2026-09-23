@@ -183,69 +183,72 @@ sudo -u chandrima touch /srv/projects/acmu/shared/t2       # must FAIL
 
 ---
 
-## Ticket #4437 — The lab dashboard nobody can reach (10 marks)
+## Ticket #4451 — Cannot log in to the ACMU lab server (10 marks)
 
 ### The setup
 
-`labbox` is a network namespace on the VM (`10.20.0.2`) with an inbound-deny
-nftables policy. Its dashboard listens on `127.0.0.1:8888` inside it.
-`lab-tunnel.service` runs inside labbox and dials out:
-`ssh -N -R 0.0.0.0:8080:localhost:8888 tunnel@gateway`. The `tunnel` account is
-key-only (`restrict,port-forwarding`), with a `Match User tunnel` drop-in in
-`/etc/ssh/sshd_config.d/60-lab-tunnel.conf`. `sudo labbox` is the candidate's
-console into the namespace.
+`acmusrv` is a key-only account on this machine (the "lab server", reached on
+its host-only address). The candidate's key pair is `~/.ssh/id_acmu`, its public
+half is in `/home/acmusrv/.ssh/authorized_keys`, and `~/.ssh/config` carries an
+`acmulab` alias. Everything server-side is correct and stays correct.
 
 ### Faults injected
 
-| # | Part | Fault | Symptom |
-|---|---|---|---|
-| 1 | (a) | `authorized_keys` → `0666` | sshd: *bad ownership or modes*; tunnel: *Permission denied (publickey)*, restarts every 5 s |
-| 2 | (b) | `-R …:localhost:8889` — dashboard is on `8888` | *connect_to localhost port 8889: failed* on every request |
+| # | Fault | Symptom |
+|---|---|---|
+| 1 | the `IdentityFile` line is deleted from the `acmulab` block; `IdentitiesOnly yes` remains | ssh offers **no key at all** → `Permission denied (publickey)` |
+| 2 | `~/.ssh/id_acmu` is `0644` | *UNPROTECTED PRIVATE KEY FILE*; the key is ignored → the same error |
+
+Both print the identical one-line error. That is the point of the question.
 
 ### Diagnosis
 
 ```bash
-journalctl -u lab-tunnel -n 5          # client side: denied
-journalctl -u ssh -n 20                # server side: exactly why
-sudo labbox ss -tlnp                   # dashboard really is on 127.0.0.1:8888
-systemctl cat lab-tunnel               # ...but the tunnel sends to 8889
-ss -tlnp | grep 8080                   # after (a): bound to 127.0.0.1 only
-sudo sshd -T -C user=tunnel,host=labbox,addr=10.20.0.2 | grep gatewayports
+ssh -v acmulab 2>&1 | grep -i 'identity file\|offering\|publickey'
+```
+
+With fault 1 present, ssh never says `Offering public key`. Once the
+`IdentityFile` line is back it does — and then the permission refusal appears:
+
+```
+@@@ WARNING: UNPROTECTED PRIVATE KEY FILE! @@@
+Permissions 0644 for '/home/candidate/.ssh/id_acmu' are too open.
 ```
 
 ### The fix
 
 ```bash
-sudo chmod 600 /home/tunnel/.ssh/authorized_keys
-sudo sed -i 's/localhost:8889/localhost:8888/' /etc/systemd/system/lab-tunnel.service
-sudo sshd -t && sudo systemctl reload ssh
-sudo systemctl daemon-reload && sudo systemctl restart lab-tunnel
+# 1 — put the key back into the alias
+printf '    IdentityFile ~/.ssh/id_acmu\n' >> ~/.ssh/config   # or edit the block
+
+# 2 — make the key private
+chmod 600 ~/.ssh/id_acmu
 ```
 
 ### Verification
 
 ```bash
-ss -tlnp | grep 8080                               # 0.0.0.0:8080 (sshd)
-curl -s http://10.20.0.1:8080 | grep ACMU       # ACMU-DASHBOARD-OK
-curl -s -m 3 http://10.20.0.2:8888 || echo blocked # labbox still unreachable
+ssh -o BatchMode=yes acmulab whoami     # acmusrv
+ls -l ~/.ssh/id_acmu                    # -rw-------
 ```
 
 ### Marks
 
 | Check | Marks |
 |---|---|
-| `s7.keys` — (a) `authorized_keys` and its directories not group/world-writable, key present | 5 |
-| `s7.target` — (b) `-R` forwards `8080` to `localhost:8888` | 5 |
-| `s7.penstrict` — `StrictModes no` instead of fixing the file | −4 |
-| `s7.penexpose` — labbox's dashboard reachable directly | −4 |
-| `s7.penpass` — password login possible for `tunnel` | −3 |
+| `s8.identity` — `IdentityFile … id_acmu` in the alias | 2 |
+| `s8.keyperm` — private key `0600` | 2 |
+| `s8.connect` — logs in as `acmusrv`, key only | 6 |
+| `s8.penpw` — gave `acmusrv` a password | −3 |
+| `s8.pen777` — world-writable under `.ssh` | −3 |
 
 ### What to probe
 
-- "Draw the tunnel. Which end listens, which connects?"
-- "In `-R 0.0.0.0:8080:localhost:8888`, whose `localhost` is that?"
-- "Why does sshd refuse a *correct* key because of file permissions?"
-- "Is this tunnel a hole in campus IT's inbound policy? Who should sign off on it?"
+- "Both faults printed the same error. How did you tell them apart?" — the only
+  honest answer is `ssh -v`.
+- "Why does ssh care about the mode of *your own* private key?"
+- "What would `Connection refused` have meant instead?"
+- "Ten machines to set up tomorrow — what do you do differently?"
 
 ---
 
@@ -255,11 +258,11 @@ curl -s -m 3 http://10.20.0.2:8888 || echo blocked # labbox still unreachable
 |---|---|---|
 | #4419 disk | 14 | the unlinked-but-open file (`df` ≠ `du`) |
 | #4423 permissions | 16 | the **setgid** bit |
-| #4437 tunnel | 10 | `StrictModes` — sshd refuses a key file others could tamper with |
+| #4451 ssh login | 10 | reading `ssh -v` — two faults, one error message |
 | **Total** | **40** | counts directly, no scaling |
 
 Across all three, the scored shortcuts are `chmod 777`, adding the auditor to
 the group, reformatting a filesystem, turning off sshd's `StrictModes`, and
-opening labbox directly instead of fixing the tunnel. Each makes the symptom vanish. A candidate who scores well by
+and giving the key-only account a password. Each makes the symptom vanish. A candidate who scores well by
 taking them is the specific failure mode this examination exists to catch —
 weigh the penalties in panel discussion, not just in arithmetic.

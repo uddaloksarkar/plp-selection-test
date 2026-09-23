@@ -88,7 +88,7 @@ parts** — one fault each, marked on its own, with the commands to check it.
 |---|---|---|
 | 1 | [Disk full on the file server](scenarios/s2-disk/ticket.md) | `df` vs `du`, a deleted-but-open file, inode exhaustion |
 | 2 | [Shared project folder unusable](scenarios/s3-permissions/ticket.md) | groups, setgid, file modes, sudoers, ACLs |
-| 3 | [The lab dashboard nobody can reach](scenarios/s7-tunnel/ticket.md) | a reverse SSH tunnel: key login and `ssh -R` |
+| 3 | [Cannot log in to the lab server](scenarios/s8-ssh/ticket.md) | ssh key login: the alias, and the key's permissions |
 
 Every ticket also scores the tempting shortcut — `chmod 777`, reformatting a
 disk, putting the auditor in the group, turning off sshd's `StrictModes`,

@@ -20,7 +20,7 @@ The raw score from `bin/score.sh` counts directly — there is no scaling.
 |---|---|---|
 | s2-disk | | 14 |
 | s3-permissions | | 16 |
-| s7-tunnel | | 10 |
+| s8-ssh | | 10 |
 | penalties (negative) | | |
 | **Part B** | | **40** |
 

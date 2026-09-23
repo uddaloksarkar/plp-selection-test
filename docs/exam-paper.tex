@@ -270,99 +270,65 @@ sudo -u buddhadev cat /srv/projects/acmu/shared/notes.md    # must work
 open; \texttt{sudo -u} \textit{user} starts a fresh one.
 
 %================================================================== Q3
-\item \textbf{The lab dashboard nobody can reach.} \hfill [10 marks]
+\item \textbf{Cannot log in to the ACMU lab server.} \hfill [10 marks]
 
-\emph{Reported by the ACMU Lab:} ``Our results dashboard has been down
-since Friday's maintenance. We open \texttt{http://gateway:8080} and get
-nothing. Somebody said the tunnel service on labbox keeps restarting. We need
-it back before the review meeting.''
+\emph{Reported by Debarshi Roy, research scholar:} ``I am supposed to log in to
+the lab server as \texttt{acmusrv} with the key the systems group set up for
+me, and run the nightly extract. It worked last week. Now it just says
+\emph{Permission denied}, and then asks me for a password I was never given. I
+have not touched anything since.''
 
-\begin{framed}
-\textbf{Background: how the dashboard gets out of the basement.} The dashboard
-runs on \textbf{labbox}, a basement machine. Campus IT lets labbox connect
-\emph{out}, but nothing may connect \emph{in}. So labbox publishes it through
-\textbf{gateway} (this VM) with a \emph{reverse SSH tunnel}:
+\texttt{ssh acmulab} should log you in to the account \texttt{acmusrv} on the
+lab server using the key \verb|~/.ssh/id_acmu|, \textbf{without a password} ---
+that account has no password to type.
+
+Two things are wrong, and they produce the \textbf{same message}:
+\texttt{Permission denied (publickey)}. The first means the key is never
+offered at all; the second means it is offered and then refused. Fixing one and
+trying again will look like nothing happened, so work out which you are looking
+at before you change anything.
+
+\hd{How to reproduce it}
 \begin{shell}
-colleagues --> gateway:8080 ==== SSH tunnel ====> labbox --> 127.0.0.1:8888
-              (this VM)    <-- labbox dials OUT --          (the dashboard)
-\end{shell}
-labbox runs, as the service \texttt{lab-tunnel}:
-\begin{shell}
-ssh -N -R 0.0.0.0:8080:localhost:8888 tunnel@gateway
-\end{shell}
+ssh acmulab
 
-In \texttt{-R}, the first half (\texttt{0.0.0.0:8080}) is where
-\emph{gateway} listens. The second half (\texttt{localhost:8888}) is where
-labbox delivers each connection, \emph{as labbox sees it} --- so that
-\texttt{localhost} is labbox's own.
-
-\smallskip
-\begin{tabular}{@{}l l l@{}}
-\textbf{gateway} & \texttt{10.20.0.1}, this VM & you are already here \\
-\textbf{labbox}  & \texttt{10.20.0.2}, basement & \texttt{sudo labbox} opens its console \\
-\end{tabular}
-
-\smallskip
-labbox is simulated on this VM and shares its files; its own are under
-\texttt{/opt/labbox/}. Its services are \texttt{labbox-dashboard} and
-\texttt{lab-tunnel}.
-\end{framed}
-
-Friday's maintenance broke the tunnel in \textbf{two independent places}.
-Each has its own cause and fix and is marked on its own; fixing one does
-nothing for the others. Tackle them in any order --- though you will only
-\emph{see} (b) in action once (a) lets the tunnel log in.
-
-%------------------------------------------------------------------ Q3(a)
-\hd{(a)\enspace gateway refuses labbox's key \hfill [5 marks]}
-labbox logs in to gateway as \texttt{tunnel}, with a key and no password.
-gateway is rejecting it, so the tunnel never comes up and restarts every few
-seconds. The client's log says \emph{that} it was denied; the server's says
-\emph{why}.
-\begin{shell}
-journalctl -u lab-tunnel -n 5          # Permission denied (publickey...)
-journalctl -u ssh -n 20                # gateway's side of the story
-\end{shell}
-\textit{Fix:} make gateway accept the key again. The key itself is correct;
-sshd refuses an \texttt{authorized\_keys} file that others could have tampered
-with.
-\begin{shell}
-journalctl -u ssh -n 5                 # Accepted publickey for tunnel
+ssh -v acmulab 2>&1 | grep -i 'identity file\|offering\|publickey'
+cat ~/.ssh/config
+ls -l ~/.ssh/
 \end{shell}
 
-%------------------------------------------------------------------ Q3(b)
-\hd{(b)\enspace The tunnel leads to the wrong place \hfill [5 marks]}
-The \texttt{-R} setting decides where on labbox each connection ends up. It
-must lead to the dashboard.
-\begin{shell}
-sudo labbox ss -tlnp                   # what is really listening on labbox
-systemctl cat lab-tunnel               # where the tunnel sends connections
-\end{shell}
-\textit{Fix:} correct the tunnel in
-\texttt{/etc/systemd/system/lab-tunnel.service}, then
-\texttt{systemctl daemon-reload} and \texttt{systemctl restart lab-tunnel}.
-\begin{shell}
-systemctl cat lab-tunnel | grep -- -R  # ends in localhost:8888
-\end{shell}
+\hd{What to fix \hfill [10 marks]}
+\begin{enumerate}[label=\textbf{\arabic{enumi}.\arabic*},leftmargin=2.8em,itemsep=0.3em]
+  \item \textbf{Make the \texttt{acmulab} alias use the right key.} One line is
+        missing from its block in \verb|~/.ssh/config|; everything else in that
+        block is correct.
+  \item \textbf{Make the key usable.} SSH refuses to use a private key that
+        other people on the machine could read, and says so plainly under
+        \texttt{-v}.
+\end{enumerate}
 
-\hd{When both are done}
+\hd{How to check you have fixed it}
 \begin{shell}
-curl -s http://10.20.0.1:8080 | grep ACMU   # ACMU-DASHBOARD-OK
+ssh -o BatchMode=yes acmulab whoami     # prints: acmusrv
+ls -l ~/.ssh/id_acmu                    # -rw------- (0600)
 \end{shell}
-You can also open \texttt{http://192.168.56.10:8080} in a browser on your own
-machine --- that is what the colleagues see.
+\texttt{BatchMode=yes} forbids any password prompt, so if this prints
+\texttt{acmusrv} the key really is doing the work.
 
-\hd{Constraints --- these apply to every part, and are marked}
+\hd{Constraints --- these are marked}
 \begin{itemize}[leftmargin=1.4em,itemsep=0.2em]
-  \item \textbf{Do not turn off \texttt{StrictModes}} (or any other sshd safety
-        check) to make the key work. Fix the file.
-  \item \textbf{labbox must stay unreachable.} Do not loosen its firewall or
-        move the dashboard off \texttt{127.0.0.1}: going round the tunnel is
-        not fixing it.
-  \item Do not give the \texttt{tunnel} account a password or a login shell.
-  \item Always run \texttt{sudo sshd -t} before reloading sshd. A broken sshd
-        configuration can lock everyone out, you included.
+  \item \textbf{Do not give \texttt{acmusrv} a password}, and do not enable
+        password authentication. The account is key-only by policy; a password
+        makes the symptom go away without fixing anything.
+  \item No \texttt{chmod 777} on anything under \texttt{.ssh}.
 \end{itemize}
+
+\emph{Hint.} \texttt{ssh -v} is the whole diagnosis: it prints which key files
+it considered, which it offered, and what the server said. \emph{Permission
+denied} means something answered and said no --- quite different from
+\emph{Connection refused}, which means nothing was listening at all. The key
+pair itself is fine; nothing needs regenerating and nothing on the server side
+needs changing.
 
 \end{enumerate}
 \end{document}

@@ -42,16 +42,17 @@ questions, in depth, not twelve shallow ones.
 - You could have fixed all of it with `/etc/hosts` in thirty seconds. Why didn't you?
 - How would you have found the `nsswitch.conf` fault with no logs at all?
 
-**S7 — reverse SSH tunnel**
-- Draw the tunnel. Which end listens, which end connects, and in which direction
+**Q3 — ssh key login**
+- Both faults printed the same error. How did you tell them apart?
+- Why does ssh care about the mode of *your own* private key? Whose problem is it?
+- What would `Connection refused` have meant instead, and where would you look?
+- Ten machines to set this up on tomorrow — what do you do differently?
   does a colleague's request travel?
 - In `-R 0.0.0.0:8080:localhost:8888`, whose `localhost` is that?
 - The key was right and sshd still refused it. Why does sshd care who can write
   `authorized_keys`, and why is `StrictModes no` the wrong fix?
 - `curl localhost:8080` worked on the gateway but not from anywhere else. What
   was listening where, and which end of the `-R` is which?
-- Why does campus IT allow labbox out but not in, and is this tunnel a hole in
-  that policy?
 
 **S5 — Python**
 - Why did it work for you as root but not for the analyst?

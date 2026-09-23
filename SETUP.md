@@ -360,6 +360,6 @@ bash bin/make-candidate-bundle.sh        # -> build/candidate-bundle/
 
 # on the VM itself
 sudo bash /opt/plp-exam/vm/healthcheck.sh          # "Baseline clean."
-sudo bash /opt/plp-exam/bin/exam-ctl.sh arm s7-tunnel
+sudo bash /opt/plp-exam/bin/exam-ctl.sh arm s8-ssh
 sudo bash /opt/plp-exam/bin/score.sh s3-permissions
 ```

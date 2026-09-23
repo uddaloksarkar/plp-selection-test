@@ -155,7 +155,7 @@ The role covers hardware; make it concrete and local, not trivia.
 |---|---|---|---|
 | 1 | Disk space | Storage | 14 |
 | 2 | User permissions | Linux | 16 |
-| 3 | Reverse SSH tunnel | Networking / SSH | 10 |
+| 3 | SSH key login | SSH / permissions | 10 |
 
 Three scenarios on one VM per candidate, 90 minutes, all three armed at once,
 candidate picks the order. Automated scoring out of 40, counted directly.
